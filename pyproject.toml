@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "anamnesis-memory"
+version = "0.1.0"
+description = "Local-first governed memory for agents"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Anamnesis contributors" }]
+keywords = ["memory", "agents", "local-first", "sqlite", "retrieval"]
+dependencies = []
+
+[project.optional-dependencies]
+model2vec = ["model2vec>=0.8"]
+sqlite-vec = ["sqlite-vec>=0.1.9"]
+dev = ["pytest>=8", "ruff>=0.6", "model2vec>=0.8", "sqlite-vec>=0.1.9"]
+
+[project.scripts]
+anamnesis = "anamnesis.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/anamnesis"]
+artifacts = ["src/anamnesis/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

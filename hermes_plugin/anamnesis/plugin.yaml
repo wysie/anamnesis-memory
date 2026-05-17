@@ -1,0 +1,5 @@
+name: anamnesis
+version: 0.1.0
+description: "Anamnesis — local-first governed memory provider with owner/platform scope, tombstones, inbox-oriented lifecycle, and operational-junk suppression."
+hooks:
+  - on_memory_write
