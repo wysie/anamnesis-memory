@@ -41,7 +41,7 @@ def main() -> int:
             embedder_label = args.embedder
 
         target = store.add_memory(
-            "Helper handles car washing at the house.",
+            "Collaborator handles car washing at the house.",
             owner="primary",
             platform_scope="whatsapp",
             domain="household",

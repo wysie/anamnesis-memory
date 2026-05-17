@@ -80,7 +80,7 @@ Implementation tokens should be authored in OKLCH, with hex comments only if nee
 - Gold: use rarely for “canonical / trusted / accepted” states, logo sparkle, or audit milestones.
 - Green: active/accepted/safe.
 - Amber: pending/inbox/review-needed.
-- Red: rejected/tombstoned/destructive.
+- Red: rejected/invalidated/destructive.
 - Cyan: technical metadata, source/platform provenance, diagnostics.
 
 ## Light theme direction
@@ -225,7 +225,7 @@ Lifecycle badge colors:
 - active / accepted: green
 - pending / inbox: amber
 - rejected: muted red
-- tombstoned: gray/red outline
+- invalidated: gray/red outline
 - corrected: violet/gold
 - source/platform: cyan/blue-gray
 
@@ -298,7 +298,7 @@ Reject these patterns during implementation:
 Order of priority:
 
 1. What is the memory/proposal?
-2. Is it active, pending, rejected, tombstoned, corrected?
+2. Is it active, pending, rejected, invalidated, corrected?
 3. Who owns it and where can it recall?
 4. Where did it come from?
 5. Why was it saved/rejected/corrected?

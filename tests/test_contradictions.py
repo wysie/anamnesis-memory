@@ -4,7 +4,7 @@ from anamnesis import Anamnesis, Contradiction
 def test_detect_contradictions_flags_opposite_permission_memories(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     allowed = store.add_memory(
-        "Helper can control devices.",
+        "Collaborator can control devices.",
         owner="hope",
         visibility="private",
         platform_scope="whatsapp",
@@ -12,7 +12,7 @@ def test_detect_contradictions_flags_opposite_permission_memories(tmp_path):
         source="test",
     )
     forbidden = store.add_memory(
-        "Helper cannot control devices.",
+        "Collaborator cannot control devices.",
         owner="hope",
         visibility="private",
         platform_scope="whatsapp",

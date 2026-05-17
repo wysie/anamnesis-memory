@@ -33,15 +33,15 @@ def test_synthesis_benchmark_scores_answer_citations_and_refusal():
     def transport(url, payload, headers, timeout):
         calls.append(payload)
         query = payload["messages"][1]["content"]
-        if "What does Helper handle" in query:
-            return {"choices": [{"message": {"content": "Helper handles pool maintenance [mem_pool]."}}]}
+        if "What does Collaborator handle" in query:
+            return {"choices": [{"message": {"content": "Collaborator handles pool maintenance [mem_pool]."}}]}
         raise AssertionError("insufficient-evidence case should not call transport")
 
     cases = [
         SynthesisBenchmarkCase(
             name="answered_with_citation",
-            query="What does Helper handle?",
-            recall_results=[RecallResult(_record("mem_pool", "Helper handles pool maintenance."), 3.0, [])],
+            query="What does Collaborator handle?",
+            recall_results=[RecallResult(_record("mem_pool", "Collaborator handles pool maintenance."), 3.0, [])],
             required_terms=("pool maintenance",),
             expected_citations=("mem_pool",),
         ),

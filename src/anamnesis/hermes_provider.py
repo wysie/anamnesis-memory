@@ -67,7 +67,7 @@ RECALL_SCHEMA = {
     "name": "anamnesis_recall",
     "description": (
         "Recall memories from Anamnesis with governance filters: owner scope, platform scope, "
-        "visibility, tombstones, and operational-junk suppression. Use before answering questions "
+        "visibility, invalidated-memory suppression, and operational-junk suppression. Use before answering questions "
         "about remembered user facts, preferences, permissions, projects, or past decisions."
     ),
     "parameters": {
@@ -93,11 +93,11 @@ RECALL_SCHEMA = {
 
 FORGET_SCHEMA = {
     "name": "anamnesis_forget",
-    "description": "Tombstone a memory by rid so it no longer appears in recall while remaining auditable.",
+    "description": "Invalidate a memory by rid so it no longer appears in recall while remaining auditable.",
     "parameters": {
         "type": "object",
         "properties": {
-            "rid": {"type": "string", "description": "Memory rid to tombstone."},
+            "rid": {"type": "string", "description": "Memory rid to invalidate."},
             "reason": {"type": "string", "description": "Optional reason."},
         },
         "required": ["rid"],

@@ -9,7 +9,7 @@ def test_classify_intake_rejects_temporary_operational_state():
         "Temporary manual process started on port 54321.",
         "Review the conversation above and update the skill library.",
         "[ASSISTANT] The temporary server started on port 8766.",
-        "U mean u create separate memory for Trusted contact and Helper though it's the same profile?",
+        "U mean u create separate memory for Trusted contact and Collaborator though it's the same profile?",
         "What is autopilot and why is there owner and domain etc?",
     ]
 
@@ -49,10 +49,10 @@ def test_classify_intake_rejects_low_value_chat_fragments():
 def test_classify_intake_accepts_durable_preferences_permissions_and_infra():
     samples = [
         "Primary user prefers WhatsApp summaries to remain local-only and never use cloud fallback.",
-        "Helper cannot control smart home devices, buy things, or run commands.",
+        "Collaborator cannot control smart home devices, buy things, or run commands.",
         "Local memory dashboard runs on 127.0.0.1:8767.",
         "Project Anamnesis uses SQLite and FTS5 for deterministic local recall.",
-        "The household includes Trusted contact, Family member, and Helper.",
+        "The household includes Trusted contact, Family member, and Collaborator.",
     ]
 
     for sample in samples:

@@ -43,7 +43,7 @@ def test_embed_missing_and_vector_recall_handles_paraphrase(tmp_path):
         synonyms={"vehicle": "car", "clean": "wash"},
     )
     record = store.add_memory(
-        "Helper handles car washing at the house.",
+        "Collaborator handles car washing at the house.",
         owner="primary",
         platform_scope="whatsapp",
         domain="household",
@@ -185,13 +185,13 @@ def test_vector_recall_cannot_bypass_scope_or_tombstones(tmp_path):
         domain="privacy",
     )
     helper = store.add_memory(
-        "Helper can ask questions but cannot control devices.",
+        "Collaborator can ask questions but cannot control devices.",
         owner="hope",
         platform_scope="whatsapp",
         domain="permissions",
     )
     obsolete = store.add_memory(
-        "Helper secret device token is old-sample-vault.",
+        "Collaborator secret device token is old-sample-vault.",
         owner="hope",
         platform_scope="whatsapp",
         domain="privacy",
@@ -262,7 +262,7 @@ def test_legacy_single_model_embedding_table_migrates_without_memory_migration(t
 def test_different_dimension_embeddings_coexist_per_model(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     record = store.add_memory(
-        "Helper handles automobile maintenance.",
+        "Collaborator handles automobile maintenance.",
         owner="primary",
         platform_scope="whatsapp",
         domain="household",
@@ -371,7 +371,7 @@ def test_ann_index_recovers_semantic_matches_when_keyword_pruning_has_no_candida
         synonyms={"vehicle": "car", "cleans": "wash", "cleaning": "wash"},
     )
     target = store.add_memory(
-        "Helper handles car washing at the house.",
+        "Collaborator handles car washing at the house.",
         owner="primary",
         platform_scope="whatsapp",
         domain="household",
@@ -537,7 +537,7 @@ def test_ann_candidates_cannot_bypass_scope_or_tombstones(tmp_path):
         domain="privacy",
     )
     obsolete = store.add_memory(
-        "Helper secret token label is sample-vault.",
+        "Collaborator secret token label is sample-vault.",
         owner="hope",
         platform_scope="whatsapp",
         domain="privacy",
@@ -658,13 +658,13 @@ def test_rebuild_vector_index_stores_governance_metadata_for_prefiltering(tmp_pa
     store = Anamnesis(tmp_path / "anamnesis.db")
     embedder = KeywordEmbedder(dimensions=("car", "wash"), synonyms={"vehicle": "car"})
     target = store.add_memory(
-        "Helper handles car washing.",
+        "Collaborator handles car washing.",
         owner="primary",
         platform_scope="whatsapp",
         domain="household",
     )
     wrong_owner = store.add_memory(
-        "Helper handles vehicle washing for another owner.",
+        "Collaborator handles vehicle washing for another owner.",
         owner="hope",
         platform_scope="whatsapp",
         domain="household",
@@ -699,7 +699,7 @@ def test_recall_can_use_sqlite_vec_backend_for_ann_candidates(tmp_path):
         synonyms={"vehicle": "car", "cleans": "wash"},
     )
     target = store.add_memory(
-        "Helper handles car washing at the house.",
+        "Collaborator handles car washing at the house.",
         owner="primary",
         platform_scope="whatsapp",
         domain="household",

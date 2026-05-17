@@ -12,7 +12,7 @@ Status: early scaffold.
 - Separate raw evidence, episodic memory, semantic memory, entity graph, and governance state.
 - Make recall explainable: every recalled item should say why it appeared.
 - Enforce owner/platform/visibility/action scopes before any agent sees memory.
-- Treat contradictions, tombstones, and decay as first-class lifecycle states.
+- Treat contradictions, invalidation, supersession, and decay as first-class lifecycle states.
 - Memory Inbox for proposed changes instead of blind auto-write.
 - Deterministic duplicate hints for candidate memories.
 - Make local LLMs optional maintenance workers, not mandatory runtime dependencies.
@@ -58,7 +58,7 @@ for result in results:
 
 ## Optional embeddings
 
-FTS recall works without any model. For semantic/paraphrase recall, provide a local embedder, embed missing rows, then pass the same embedder into recall. Scope and tombstone filters still run before vector scoring.
+FTS recall works without any model. For semantic/paraphrase recall, provide a local embedder, embed missing rows, then pass the same embedder into recall. Scope and invalidation filters still run before vector scoring.
 
 Embeddings are a rebuildable search cache, not canonical memory data. The `memories` table stays model-independent, while `memory_embeddings` is keyed by `(rid, model_id)` and stores the model dimension with each vector. If you switch from `potion-base-2M` to `potion-base-8M`, `potion-base-32M`, or `potion-retrieval-32M`, Anamnesis keeps the existing memories and old embedding cache, reports coverage for the newly active model, and backfills only missing vectors for that model. The active embedder is authoritative: recall does not automatically cascade through smaller models unless a future advanced mode explicitly implements and benchmarks that behaviour.
 
@@ -117,11 +117,11 @@ ANAMNESIS_ALLOW_MODEL_DOWNLOADS=1 anamnesis --db ~/.anamnesis/anamnesis.db embed
 anamnesis --db ~/.anamnesis/anamnesis.db embeddings index-status --model potion-base-32M --json
 anamnesis --db ~/.anamnesis/anamnesis.db embeddings index-rebuild --model potion-base-32M
 anamnesis --db ~/.anamnesis/anamnesis.db recall-config set --model potion-base-32M --ann-backend sqlite-vec --recall-policy latency_first --ann-candidate-limit 50 --vector-candidate-limit 1000
-anamnesis --db ~/.anamnesis/anamnesis.db recall "What does Helper handle?" --owner primary --platform whatsapp --explain --json
+anamnesis --db ~/.anamnesis/anamnesis.db recall "What is the user privacy preference?" --owner primary --platform whatsapp --explain --json
 ANAMNESIS_ALLOW_MODEL_DOWNLOADS=1 anamnesis embeddings benchmark --models potion-base-2M,potion-base-8M,potion-base-32M,potion-retrieval-32M --synthetic-count 1000 --include-adversarial --vector-candidate-limit 1000 --ann-candidate-limit 200 --ann-backend sqlite-vec --recall-policy latency_first --json
 ```
 
-`embeddings status` compares active memories against the active model's exact `model_id` and dimension. A non-zero `missing` count means semantic vectors for that model need backfill; FTS fallback remains available while the index warms. `embeddings index-status` compares cached embeddings with the sqlite-vec derived index and reports both missing vectors and stale governance metadata; `index-rebuild` rebuilds that per-model vector index from canonical cached embeddings plus governance metadata (owner, visibility, platform scope, status, domain) without re-embedding memories. `recall-config set` persists runtime recall defaults for the model, sqlite-vec DB, policy, and candidate limits. `recall ... --explain --json` runs governed recall using those defaults and includes the applied config and basic execution metadata. Recall applies a small deterministic intent-expansion layer before FTS/vector scoring for low-overlap paraphrases such as child/asleep/quiet-audio, buyer/outcome wording, transient operational chatter, and okay/go-ahead action signals; expanded hits are marked with `semantic_intent_expansion`. `embeddings benchmark` runs each selected model alone in an isolated fixture DB and reports backfill time, backfill throughput, DB size, recall p50/p95 latency, and a small recall score. `--synthetic-count` adds distractor memories for scale checks, `--include-adversarial` adds privacy/tombstone cases, `--vector-candidate-limit` enables candidate-pruned vector scoring from top keyword candidates, and `--ann-candidate-limit` adds candidates from a `VectorIndex` backend. The default backend is `sqlite-vec`; use `--ann-backend exact` for the dependency-free exact test backend. Recall policy options are `latency_first` (default: use sqlite-vec only when keyword candidates are below `--ann-min-keyword-candidates`), `recall_first` (always merge keyword and sqlite-vec candidates), and `semantic_only` (skip FTS-only results and use vector-index candidates). The benchmark deliberately does not enable tiered/cascade recall.
+`embeddings status` compares active memories against the active model's exact `model_id` and dimension. A non-zero `missing` count means semantic vectors for that model need backfill; FTS fallback remains available while the index warms. `embeddings index-status` compares cached embeddings with the sqlite-vec derived index and reports both missing vectors and stale governance metadata; `index-rebuild` rebuilds that per-model vector index from canonical cached embeddings plus governance metadata (owner, visibility, platform scope, status, domain) without re-embedding memories. `recall-config set` persists runtime recall defaults for the model, sqlite-vec DB, policy, and candidate limits. `recall ... --explain --json` runs governed recall using those defaults and includes the applied config and basic execution metadata. Recall applies a small deterministic intent-expansion layer before FTS/vector scoring for low-overlap paraphrases such as child/asleep/quiet-audio, buyer/outcome wording, transient operational chatter, and okay/go-ahead action signals; expanded hits are marked with `semantic_intent_expansion`. `embeddings benchmark` runs each selected model alone in an isolated fixture DB and reports backfill time, backfill throughput, DB size, recall p50/p95 latency, and a small recall score. `--synthetic-count` adds distractor memories for scale checks, `--include-adversarial` adds privacy/invalidation cases, `--vector-candidate-limit` enables candidate-pruned vector scoring from top keyword candidates, and `--ann-candidate-limit` adds candidates from a `VectorIndex` backend. The default backend is `sqlite-vec`; use `--ann-backend exact` for the dependency-free exact test backend. Recall policy options are `latency_first` (default: use sqlite-vec only when keyword candidates are below `--ann-min-keyword-candidates`), `recall_first` (always merge keyword and sqlite-vec candidates), and `semantic_only` (skip FTS-only results and use vector-index candidates). The benchmark deliberately does not enable tiered/cascade recall.
 
 Current official registry entries:
 
@@ -149,7 +149,7 @@ anamnesis --db ~/.anamnesis/anamnesis.db synthesis-config set \
   --max-memory-chars 1200
 
 ANAMNESIS_ALLOW_MODEL_DOWNLOADS=1 anamnesis --db ~/.anamnesis/anamnesis.db synthesize \
-  "What does Helper handle?" \
+  "What is the user privacy preference?" \
   --owner primary \
   --platform whatsapp \
   --json
@@ -176,9 +176,9 @@ item = store.propose_memory(
 record = store.accept_inbox_item(item.cid)
 ```
 
-## Shadow-mode checks
+## Preview checks
 
-Use `shadow-turn` to preview what Anamnesis would save, inbox, reject, and inject for a turn without mutating the DB:
+Use `shadow-turn` to preview what Anamnesis would save, inbox, reject, and inject for a turn without mutating the DB. The command name is historical; user-facing UI calls this Preview.
 
 ```bash
 anamnesis --db ~/.anamnesis/anamnesis.db shadow-turn \
@@ -188,7 +188,7 @@ anamnesis --db ~/.anamnesis/anamnesis.db shadow-turn \
   --json
 ```
 
-Use `shadow-batch` to dry-run a JSONL/text transcript. Add `--apply` only when you intentionally want accepted items written and inbox candidates proposed:
+Use `shadow-batch` to preview a JSONL/text transcript. Add `--apply` only when you intentionally want accepted items written and inbox candidates proposed:
 
 ```bash
 anamnesis --db ~/.anamnesis/anamnesis.db shadow-batch transcript.jsonl \
@@ -209,10 +209,10 @@ anamnesis --db ~/.anamnesis/anamnesis.db maintenance report --json
 Deterministic contradiction checks flag simple polarity conflicts without auto-resolving them:
 
 ```python
-store.add_memory("Helper can control devices.", owner="hope", domain="permissions")
-store.add_memory("Helper cannot control devices.", owner="hope", domain="permissions")
+store.add_memory("The project deploys on Fridays.", owner="primary", domain="project")
+store.add_memory("The project must not deploy on Fridays.", owner="primary", domain="project")
 
-conflicts = store.detect_contradictions(owner="hope", domain="permissions")
+conflicts = store.detect_contradictions(owner="primary", domain="project")
 resolved = store.resolve_contradiction(
     conflicts[0].conflict_id,
     winner_rid=conflicts[0].right_rid,
@@ -248,11 +248,11 @@ assert report.failed == 0
 
 The built-in suite seeds a small privacy/safety fixture and verifies the behaviours Anamnesis must preserve:
 
-- owner scope: Primary user private memories stay invisible to Helper/Trusted contact contexts
+- owner scope: private memories stay invisible to other-owner contexts
 - platform scope: recall only returns memories whose scope is `all` or includes the current platform; source provenance is stored separately
-- tombstones: removed memories do not recall
+- invalidation: invalidated memories do not recall
 - rejected inbox items: temporary task state stays out of durable recall
-- contradiction resolution: winner recalls, loser stays tombstoned
+- contradiction resolution: winner recalls, loser is invalidated
 - duplicate prevention: duplicate candidates are flagged but not auto-accepted
 
 ```python

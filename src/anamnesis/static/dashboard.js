@@ -617,7 +617,7 @@ function renderMaintenanceResult(payload) {
     duplicates.forEach((item, idx) => {
       lines.push(`${idx + 1}. Overlap ${Math.round(Number(item.overlap || 0) * 100)}%`);
       lines.push(`   Keep: ${memorySnippet(item.canonical_text)}`);
-      lines.push(`   Supersede: ${memorySnippet(item.shadowed_text)}`);
+      lines.push(`   Supersede: ${memorySnippet(item.superseded_text)}`);
     });
     if (summary.truncated_duplicate_examples) {
       lines.push(`... plus ${formatCount(summary.truncated_duplicate_examples)} more duplicate example(s)`);
@@ -632,12 +632,12 @@ function renderMaintenanceResult(payload) {
   lines.push(expired.length ? 'Expired inbox examples:' : 'Expired inbox examples: none');
   expired.slice(0, 10).forEach((item, idx) => lines.push(`${idx + 1}. ${memorySnippet(item.proposed_text)}`));
   lines.push('');
-  const shadowed = payload.shadowed_duplicates || [];
-  lines.push(shadowed.length ? 'Superseded duplicate IDs:' : 'Superseded duplicate IDs: none');
-  shadowed.slice(0, 10).forEach((item, idx) => {
+  const superseded = payload.shadowed_duplicates || [];
+  lines.push(superseded.length ? 'Superseded duplicate IDs:' : 'Superseded duplicate IDs: none');
+  superseded.slice(0, 10).forEach((item, idx) => {
     lines.push(`${idx + 1}. ${shortId(item.shadowed_rid)} superseded by ${shortId(item.canonical_rid)} (${Math.round(Number(item.overlap || 0) * 100)}%)`);
   });
-  if (shadowed.length > 10) lines.push(`... plus ${formatCount(shadowed.length - 10)} more`);
+  if (superseded.length > 10) lines.push(`... plus ${formatCount(superseded.length - 10)} more`);
   return lines.join('\n');
 }
 

@@ -13,6 +13,6 @@ Memory-system rules:
 
 - Core recall must work without an LLM.
 - Scope filters must run before ranking or generation.
-- Tombstoned/superseded memories must not be recalled by default.
+- Invalidated/superseded memories must not be recalled by default.
 - Local LLM workers may propose, but deterministic policy decides.
 - New lifecycle/governance behavior needs tests.

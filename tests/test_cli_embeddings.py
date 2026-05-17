@@ -70,7 +70,7 @@ def test_recall_config_persists_defaults_and_recall_explain_uses_them(tmp_path, 
     index_db = tmp_path / "vectors.db"
     store = Anamnesis(db_path)
     target = store.add_memory(
-        "Helper handles car washing and pool maintenance.",
+        "Collaborator handles car washing and pool maintenance.",
         owner="primary",
         platform_scope="whatsapp",
         domain="household",

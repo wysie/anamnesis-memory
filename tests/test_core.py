@@ -57,7 +57,7 @@ def test_recall_enforces_scope_before_ranking(tmp_path):
         importance=0.9,
     )
     store.add_memory(
-        "Helper can ask weather questions but cannot control devices.",
+        "Collaborator can ask weather questions but cannot control devices.",
         owner="hope",
         visibility="private",
         platform_scope="whatsapp",

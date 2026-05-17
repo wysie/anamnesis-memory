@@ -19,9 +19,9 @@ The design goal is not “more recall”. The design goal is “safer, cleaner, 
 ## Core principles
 
 1. **Local-first:** memory content stays on the machine.
-2. **Deterministic core:** core storage, ranking, scoping, tombstones, and recall work without an LLM.
+2. **Deterministic core:** core storage, ranking, scoping, invalidations, and recall work without an LLM.
 3. **LLM optional:** a local LLM may propose summaries, entities, merges, conflicts, and lifecycle classes, but it is never the source of truth.
-4. **Governance first:** contradictions, decay, provenance, scopes, and tombstones are first-class.
+4. **Governance first:** contradictions, decay, provenance, scopes, and invalidations are first-class.
 5. **Explain every recall:** every recall result includes reasons and penalties.
 6. **Fail closed on scope:** if a memory’s visibility/owner/platform/action scope is uncertain, do not inject it.
 7. **Raw evidence is not memory:** transcripts are audit/evidence; semantic memory is compact, durable, and curated.
@@ -46,7 +46,7 @@ People, projects, tools, places, and relationships. Used for scoped recall and n
 
 ### 5. Governance layer
 
-Contradictions, tombstones, decay, pending memory inbox items, audit log, source provenance, and review state.
+Contradictions, invalidations, decay, pending memory inbox items, audit log, source provenance, and review state.
 
 ## Data model v0.1
 
@@ -65,7 +65,7 @@ Canonical curated memory rows.
 - `source`: source system/importer
 - `importance`: 0.0–1.0
 - `confidence`: 0.0–1.0
-- `status`: `active | tombstoned | superseded | pending`
+- `status`: `active | tombstoned | shadowed | pending` (displayed as Active, Invalidated, Superseded, Pending)
 - `created_at`, `updated_at`, `last_access`: unix timestamps
 - `ttl_days`: optional suggested decay TTL
 - `metadata_json`: optional JSON payload, including provenance fields such as `source_platform` when the memory was captured from a platform-specific turn
@@ -115,7 +115,7 @@ Candidate memories proposed by rules, imports, or optional local LLM.
 
 ### audit_log
 
-Append-only records of writes, tombstones, merges, imports, recalls, and admin changes.
+Append-only records of writes, invalidations, merges, imports, recalls, and admin changes.
 
 ## Recall pipeline v0.1
 
@@ -147,7 +147,7 @@ Append-only records of writes, tombstones, merges, imports, recalls, and admin c
    - `decay_penalty`
 6. Update `last_access` and audit the recall.
 
-Vector search is optional in v0.2: callers may pass a local embedder to `recall(...)`, and `embed_missing(...)` stores vectors keyed by `(rid, model_id)` with the vector dimension recorded per row. Canonical memory rows are model-independent; switching from 2M to 8M/32M is therefore an embedding-cache backfill/reindex, not a memory database migration. The configured embedder is authoritative for recall: Anamnesis does not automatically tier/cascade through smaller models, because different model sizes may have different dimensions/vector spaces. Scope, visibility, platform, domain, tombstone, and suppression filters still run before vector scoring, so semantic similarity cannot bypass governance. FTS-only recall remains the dependency-free fallback while a new active model is being backfilled.
+Vector search is optional in v0.2: callers may pass a local embedder to `recall(...)`, and `embed_missing(...)` stores vectors keyed by `(rid, model_id)` with the vector dimension recorded per row. Canonical memory rows are model-independent; switching from 2M to 8M/32M is therefore an embedding-cache backfill/reindex, not a memory database migration. The configured embedder is authoritative for recall: Anamnesis does not automatically tier/cascade through smaller models, because different model sizes may have different dimensions/vector spaces. Scope, visibility, platform, domain, invalidate, and suppression filters still run before vector scoring, so semantic similarity cannot bypass governance. FTS-only recall remains the dependency-free fallback while a new active model is being backfilled.
 
 ## Embedding model distribution
 
@@ -204,5 +204,5 @@ Anamnesis must be compared with current baselines on:
 - Enforce scope before ranking.
 - Tombstone memory and exclude it from recall.
 - Return explainable recall reasons.
-- Record recall/write/tombstone audit events.
+- Record recall/write/invalidate audit events.
 - Full test coverage for the above.

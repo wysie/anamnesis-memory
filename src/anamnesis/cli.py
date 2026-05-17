@@ -140,7 +140,7 @@ def _build_parser() -> argparse.ArgumentParser:
     benchmark.add_argument(
         "--include-adversarial",
         action="store_true",
-        help="Include privacy/tombstone/distractor cases in the benchmark score.",
+        help="Include privacy/invalidation/distractor cases in the benchmark score.",
     )
     benchmark.add_argument(
         "--vector-candidate-limit",
@@ -328,7 +328,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     maintenance = subparsers.add_parser("maintenance", help="Run local memory hygiene tasks.")
     maintenance_sub = maintenance.add_subparsers(dest="maintenance_command", required=True)
-    shadow = maintenance_sub.add_parser("shadow-duplicates", help="Mark near-duplicate active memories as shadowed.")
+    shadow = maintenance_sub.add_parser("shadow-duplicates", help="Mark near-duplicate active memories as superseded.")
     shadow.add_argument("--owner")
     shadow.add_argument("--domain")
     shadow.add_argument("--threshold", type=float, default=0.9)
@@ -694,11 +694,11 @@ def _handle_maintenance(args: argparse.Namespace, store: Anamnesis) -> int:
             print(json.dumps(payload, sort_keys=True))
         else:
             if not shadowed:
-                print("no duplicate memories shadowed")
+                print("no duplicate memories superseded")
             else:
                 for item in shadowed:
                     print(
-                        f"shadowed={item['shadowed_rid']} canonical={item['canonical_rid']} overlap={item['overlap']}"
+                        f"superseded={item['shadowed_rid']} canonical={item['canonical_rid']} overlap={item['overlap']}"
                     )
         return 0
     if args.maintenance_command == "autopilot":
@@ -724,7 +724,7 @@ def _handle_maintenance(args: argparse.Namespace, store: Anamnesis) -> int:
             print(json.dumps(payload, sort_keys=True))
         else:
             print(
-                f"expired_inbox={len(expired)} shadowed_duplicates={len(shadowed)}"
+                f"expired_inbox={len(expired)} superseded_duplicates={len(shadowed)}"
             )
         return 0
     if args.maintenance_command == "report":
@@ -1440,7 +1440,7 @@ def _seed_embedding_benchmark_fixture(
     memories = [
         ("local", "Anamnesis keeps local private memory on the user machine."),
         ("devices", "Delegate users can ask questions but cannot control smart-home devices."),
-        ("car", "Helper handles car washing and pool maintenance."),
+        ("car", "Collaborator handles car washing and pool maintenance."),
         ("model", "Embedding model changes rebuild a search cache instead of migrating memory."),
     ]
     cases: list[dict[str, object]] = []
@@ -1468,7 +1468,7 @@ def _seed_embedding_benchmark_fixture(
             source="embedding-benchmark",
         )
         tombstoned = store.add_memory(
-            "Benchmark tombstone memory about smart-home device control.",
+            "Benchmark invalidated memory about smart-home device control.",
             owner="benchmark",
             visibility="private",
             platform_scope="cli",
@@ -1484,7 +1484,7 @@ def _seed_embedding_benchmark_fixture(
                     "forbidden_rids": [private_other.rid],
                 },
                 {
-                    "query": "tombstone smart-home device control",
+                    "query": "invalidated smart-home device control",
                     "expected_rids": [],
                     "forbidden_rids": [tombstoned.rid],
                 },

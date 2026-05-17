@@ -12,7 +12,7 @@ def test_recall_benchmark_reports_passed_cases_and_leak_failures(tmp_path):
         source="test",
     )
     blocked = store.add_memory(
-        "Helper cannot control smart home devices.",
+        "Collaborator cannot control smart home devices.",
         owner="hope",
         visibility="private",
         platform_scope="whatsapp",
