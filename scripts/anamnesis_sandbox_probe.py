@@ -209,16 +209,40 @@ def _run_direct_probe(
         allowed_visibility={"private"},
         limit=10,
     )
-    stored_texts = [row.record.text for row in rows]
-    junk_leaked = any(junk in "\n".join(stored_texts + [block]) for junk in JUNK_INPUTS)
+    recalled_texts = [row.record.text for row in rows]
+    with store._connect() as conn:  # noqa: SLF001 - sandbox probe verifies DB side effects.
+        active_texts = [
+            str(row["text"])
+            for row in conn.execute("SELECT text FROM memories WHERE status='active' ORDER BY created_at")
+        ]
+        inbox_texts = [
+            str(row["proposed_text"])
+            for row in conn.execute("SELECT proposed_text FROM memory_inbox ORDER BY created_at")
+        ]
+        recall_query_count = int(
+            conn.execute("SELECT COUNT(*) FROM audit_log WHERE event_type='recall_query'").fetchone()[0]
+        )
+    inspected_text = "\n".join(recalled_texts + active_texts + inbox_texts + [block])
+    junk_leaked = any(junk in inspected_text for junk in JUNK_INPUTS)
     prefetch_contains = DURABLE_RULE in block
-    only_durable = stored_texts == [DURABLE_RULE]
+    only_durable_active = active_texts == [DURABLE_RULE]
+    only_durable_recalled = recalled_texts == [DURABLE_RULE]
     return {
-        "ok": bool(provider.is_available() and prefetch_contains and only_durable and not junk_leaked),
+        "ok": bool(
+            provider.is_available()
+            and prefetch_contains
+            and only_durable_active
+            and only_durable_recalled
+            and not junk_leaked
+            and recall_query_count > 0
+        ),
         "provider_available": provider.is_available(),
         "prefetch_contains_durable_rule": prefetch_contains,
         "prefetch_block": block,
-        "stored_texts": stored_texts,
+        "stored_texts": recalled_texts,
+        "active_texts": active_texts,
+        "inbox_texts": inbox_texts,
+        "recall_query_count": recall_query_count,
         "junk_leaked": junk_leaked,
     }
 

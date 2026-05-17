@@ -106,7 +106,7 @@ FORGET_SCHEMA = {
 
 CORRECT_SCHEMA = {
     "name": "anamnesis_correct",
-    "description": "Correct a memory by tombstoning the old rid and creating an audited replacement.",
+    "description": "Correct a memory by invalidating the old rid and creating an audited replacement.",
     "parameters": {
         "type": "object",
         "properties": {

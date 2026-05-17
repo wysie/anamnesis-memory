@@ -16,8 +16,9 @@ _SENTENCE_RE = re.compile(r"[^.!?]+[.!?]?")
 
 
 _LOW_VALUE_CHAT_FRAGMENT_PATTERNS = [
-    r"^\s*(?:\[(?:user|assistant)\]\s*)?(?:ah\s+)?(?:ok|okay|k)(?:\s+(?:go ahead|sure|lah|la|leh))*[.!\s]*$",
-    r"^\s*(?:\[(?:user|assistant)\]\s*)?(?:ok(?:ay)?\s+)?go ahead(?:\s+(?:la|lah|leh))?[.!\s]*$",
+    r"^\s*(?:\[(?:user|assistant|system)\]\s*)?(?:ah\s+)?(?:ok|okay|k)(?:\s+(?:go ahead|sure|lah|la|leh))*[.!\s]*$",
+    r"^\s*(?:\[(?:user|assistant|system)\]\s*)?(?:yes|yep|yeah)\s+go ahead(?:\s+(?:la|lah|leh))?[.!\s]*$",
+    r"^\s*(?:\[(?:user|assistant|system)\]\s*)?(?:ok(?:ay)?\s+)?go ahead(?:\s+(?:la|lah|leh))?[.!\s]*$",
     r"^\s*(?:\[(?:user|assistant)\]\s*)?(?:please\s+)?(?:fix it|carry on|continue|proceed|go)(?:\s+(?:la|lah|leh))?[.!\s]*$",
     r"^\s*(?:\[(?:user|assistant)\]\s*)?(?:please\s+)?go and do what u need.*$",
     r"^\s*(?:\[(?:user|assistant)\]\s*)?now what[.!?\s]*$",
@@ -33,6 +34,12 @@ _LOW_VALUE_CHAT_FRAGMENT_PATTERNS = [
 _TEMPORARY_PATTERNS = [
     r"\[assistant\]",
     r"\[user\]",
+    r"\[system\]",
+    r"\[system note:",
+    r"<memory-context>",
+    r"the following is recalled memory context",
+    r"\buse\s+anamnesis_recall\b",
+    r"\banamnesis_recall\s+for\s+this\s+exact\s+query\b",
     r"review the conversation above",
     r"initiated the conversation with a greeting",
     r"nothing was worth saving",

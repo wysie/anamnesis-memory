@@ -39,6 +39,9 @@ def test_sandbox_probe_script_direct_mode_creates_profile_shim_and_filters_junk(
     assert payload["direct_probe"]["stored_texts"] == [
         "Primary user wants Anamnesis sandbox trials to stay CLI-only until explicitly approved for gateway."
     ]
+    assert payload["direct_probe"]["active_texts"] == payload["direct_probe"]["stored_texts"]
+    assert payload["direct_probe"]["inbox_texts"] == []
+    assert payload["direct_probe"]["recall_query_count"] > 0
     assert (profile_dir / "plugins" / "anamnesis" / "__init__.py").exists()
     assert (profile_dir / "plugins" / "anamnesis" / "plugin.yaml").exists()
     assert (profile_dir / "anamnesis" / "anamnesis.db").exists()

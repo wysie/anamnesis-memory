@@ -9,6 +9,9 @@ def test_classify_intake_rejects_temporary_operational_state():
         "Temporary manual process started on port 54321.",
         "Review the conversation above and update the skill library.",
         "[ASSISTANT] The temporary server started on port 8766.",
+        "[System note: The following is recalled memory context, NOT new user input.]",
+        "<memory-context>YantrikDB Recall</memory-context>",
+        "Use anamnesis_recall for this exact query: Anamnesis sandbox gateway approval.",
         "U mean u create separate memory for Trusted contact and Collaborator though it's the same profile?",
         "What is autopilot and why is there owner and domain etc?",
     ]
@@ -23,6 +26,7 @@ def test_classify_intake_rejects_temporary_operational_state():
 def test_classify_intake_rejects_low_value_chat_fragments():
     samples = [
         "Go ahead.",
+        "Yes go ahead",
         "Ok go ahead.",
         "Ok go ahead la",
         "[USER] Ok go ahead",
