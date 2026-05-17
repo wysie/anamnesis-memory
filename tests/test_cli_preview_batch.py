@@ -4,7 +4,7 @@ from anamnesis import Anamnesis
 from anamnesis.cli import main
 
 
-def test_cli_shadow_batch_dry_runs_jsonl_without_mutating(tmp_path, capsys):
+def test_cli_preview_batch_dry_runs_jsonl_without_mutating(tmp_path, capsys):
     db_path = tmp_path / "anamnesis.db"
     transcript_path = tmp_path / "transcript.jsonl"
     store = Anamnesis(db_path)
@@ -18,7 +18,7 @@ def test_cli_shadow_batch_dry_runs_jsonl_without_mutating(tmp_path, capsys):
         "\n".join(
             [
                 json.dumps({"text": "Ok go ahead la"}),
-                json.dumps({"user": "Primary user prefers batch shadow-mode before dashboard."}),
+                json.dumps({"user": "Primary user prefers batch preview before dashboard."}),
                 json.dumps({"text": "Maybe dashboard review should happen weekly."}),
             ]
         ),
@@ -30,7 +30,7 @@ def test_cli_shadow_batch_dry_runs_jsonl_without_mutating(tmp_path, capsys):
             [
                 "--db",
                 str(db_path),
-                "shadow-batch",
+                "preview-batch",
                 str(transcript_path),
                 "--owner",
                 "primary",
@@ -43,7 +43,7 @@ def test_cli_shadow_batch_dry_runs_jsonl_without_mutating(tmp_path, capsys):
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["mode"] == "shadow_batch"
+    assert payload["mode"] == "preview_batch"
     assert payload["summary"] == {"total": 3, "accept": 1, "inbox": 1, "reject": 1}
     assert payload["reason_counts"]["low_value_chat_fragment"] == 1
     assert payload["reason_counts"]["durable_signal"] == 1
@@ -56,13 +56,13 @@ def test_cli_shadow_batch_dry_runs_jsonl_without_mutating(tmp_path, capsys):
         assert conn.execute("SELECT COUNT(*) FROM memory_inbox").fetchone()[0] == 0
 
 
-def test_cli_shadow_batch_apply_writes_accepts_and_inboxes(tmp_path, capsys):
+def test_cli_preview_batch_apply_writes_accepts_and_inboxes(tmp_path, capsys):
     db_path = tmp_path / "anamnesis.db"
     transcript_path = tmp_path / "transcript.jsonl"
     transcript_path.write_text(
         "\n".join(
             [
-                json.dumps({"text": "Primary user prefers batch shadow-mode before dashboard."}),
+                json.dumps({"text": "Primary user prefers batch preview before dashboard."}),
                 json.dumps({"text": "Maybe dashboard review should happen weekly."}),
                 json.dumps({"text": "Thanks"}),
             ]
@@ -75,7 +75,7 @@ def test_cli_shadow_batch_apply_writes_accepts_and_inboxes(tmp_path, capsys):
             [
                 "--db",
                 str(db_path),
-                "shadow-batch",
+                "preview-batch",
                 str(transcript_path),
                 "--owner",
                 "primary",
@@ -92,14 +92,14 @@ def test_cli_shadow_batch_apply_writes_accepts_and_inboxes(tmp_path, capsys):
 
     assert payload["summary"] == {"total": 3, "accept": 1, "inbox": 1, "reject": 1}
     memories = store.recall(
-        "batch shadow-mode dashboard",
+        "batch preview dashboard",
         owner="primary",
         platform="whatsapp",
         allowed_visibility={"private"},
         limit=10,
     )
     assert [result.record.text for result in memories] == [
-        "Primary user prefers batch shadow-mode before dashboard."
+        "Primary user prefers batch preview before dashboard."
     ]
     assert memories[0].record.metadata["source_platform"] == "telegram"
     assert memories[0].record.platform_scope == "all"

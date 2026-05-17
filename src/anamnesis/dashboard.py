@@ -64,10 +64,10 @@ class DashboardAPI:
             if method == "GET" and route.startswith("/api/audit/"):
                 rid = unquote(route.removeprefix("/api/audit/"))
                 return self._json(200, self.audit(rid))
-            if method == "POST" and route == "/api/shadow-turn":
-                return self._json(200, self.shadow_turn(self._parse_body(body)))
-            if method == "POST" and route == "/api/shadow-memory-write":
-                return self._json(200, self.shadow_memory_write(self._parse_body(body)))
+            if method == "POST" and route == "/api/preview-turn":
+                return self._json(200, self.preview_turn(self._parse_body(body)))
+            if method == "POST" and route == "/api/preview-memory-write":
+                return self._json(200, self.preview_memory_write(self._parse_body(body)))
             if method == "POST" and route == "/api/inbox/accept":
                 return self._json(200, self.accept_inbox(self._parse_body(body)))
             if method == "POST" and route == "/api/inbox/reject":
@@ -192,7 +192,7 @@ class DashboardAPI:
         return {
             "generated_at": time.time(),
             "counts": {
-                "memories": _filled_counts(memory_counts, ["active", "shadowed", "tombstoned"]),
+                "memories": _filled_counts(memory_counts, ["active", "superseded", "invalidated"]),
                 "inbox": _filled_counts(
                     inbox_counts, ["pending", "accepted", "rejected", "expired"]
                 ),
@@ -298,7 +298,7 @@ class DashboardAPI:
             "correction_chain": chain,
         }
 
-    def shadow_turn(self, payload: JsonDict) -> JsonDict:
+    def preview_turn(self, payload: JsonDict) -> JsonDict:
         text = _required_str(payload, "text")
         owner = str(payload.get("owner") or "default")
         platform = str(payload.get("platform") or "local")
@@ -306,8 +306,8 @@ class DashboardAPI:
         domain = str(payload.get("domain") or "")
         limit = int(payload.get("limit") or 5)
         return {
-            "mode": "shadow",
-            **self._shadow_payload(
+            "mode": "preview",
+            **self._preview_payload(
                 text=text,
                 owner=owner,
                 platform=platform,
@@ -317,7 +317,7 @@ class DashboardAPI:
             ),
         }
 
-    def shadow_memory_write(self, payload: JsonDict) -> JsonDict:
+    def preview_memory_write(self, payload: JsonDict) -> JsonDict:
         text = _required_str(payload, "text")
         owner = str(payload.get("owner") or "default")
         platform = str(payload.get("platform") or "local")
@@ -325,7 +325,7 @@ class DashboardAPI:
         origin = str(payload.get("origin") or "")
         visibility = str(payload.get("visibility") or "private")
         apply = bool(payload.get("apply", False))
-        shadow = self._shadow_payload(
+        preview = self._preview_payload(
             text=text,
             owner=owner,
             platform=platform,
@@ -333,20 +333,20 @@ class DashboardAPI:
             domain=target,
             limit=int(payload.get("limit") or 1),
         )
-        shadow["mode"] = "shadow_memory_write"
-        shadow["input"].update({"target": target, "origin": origin, "source": "hermes_memory_tool"})
+        preview["mode"] = "preview_memory_write"
+        preview["input"].update({"target": target, "origin": origin, "source": "hermes_memory_tool"})
         applied = None
         if apply:
-            applied = self._apply_shadow_write(
+            applied = self._apply_preview_write(
                 text=text,
                 owner=owner,
                 visibility=visibility,
                 domain=target,
-                payload=shadow,
+                payload=preview,
                 source="hermes_memory_tool",
-                metadata={"origin": origin, "shadow_memory_write_applied": True},
+                metadata={"origin": origin, "preview_memory_write_applied": True},
             )
-        return {**shadow, "apply": apply, "applied": applied}
+        return {**preview, "apply": apply, "applied": applied}
 
     def correct(self, payload: JsonDict) -> JsonDict:
         rid = _required_str(payload, "rid")
@@ -547,7 +547,7 @@ class DashboardAPI:
                     tuple(params),
                 ).fetchall()
             ]
-        duplicate_preview = self.store.preview_duplicate_shadowing(
+        duplicate_preview = self.store.preview_duplicate_supersession(
             owner=owner,
             domain=domain,
             threshold=threshold,
@@ -560,7 +560,7 @@ class DashboardAPI:
                     "stale_pending_inbox": pending_stale,
                     "active_memories_considered": duplicate_preview["active_memories_considered"],
                     "duplicate_pairs_compared": duplicate_preview["compared_pairs"],
-                    "would_supersede_duplicates": duplicate_preview["would_shadow_count"],
+                    "would_supersede_duplicates": duplicate_preview["would_supersede_count"],
                     "shown_duplicate_examples": len(duplicate_preview["examples"]),
                     "truncated_duplicate_examples": duplicate_preview["examples_truncated"],
                 },
@@ -574,12 +574,12 @@ class DashboardAPI:
             owner=owner,
             domain=domain,
         )
-        shadowed = self.store.shadow_duplicate_memories(owner=owner, domain=domain, threshold=threshold)
+        superseded = self.store.supersede_duplicate_memories(owner=owner, domain=domain, threshold=threshold)
         out = {
             "mode": "applied",
             "expired_inbox": [inbox_item_dict(item) for item in expired],
-            "shadowed_duplicates": shadowed,
-            "summary": {"expired_inbox": len(expired), "shadowed_duplicates": len(shadowed)},
+            "superseded_duplicates": superseded,
+            "summary": {"expired_inbox": len(expired), "superseded_duplicates": len(superseded)},
         }
         self._record_audit("maintenance_autopilot", out)
         return out
@@ -695,21 +695,21 @@ class DashboardAPI:
     def batch_memories(self, payload: JsonDict) -> JsonDict:
         action = _required_str(payload, "action")
         rids = _required_str_list(payload, "rids")
-        if action != "tombstone":
-            raise ValueError("action must be tombstone")
+        if action != "invalidate":
+            raise ValueError("action must be invalidate")
         results: list[JsonDict] = []
         errors: list[JsonDict] = []
-        reason = str(payload.get("reason") or "dashboard batch tombstone")
+        reason = str(payload.get("reason") or "dashboard batch invalidate")
         for rid in rids:
             try:
-                self.store.tombstone(rid, reason=reason)
+                self.store.invalidate(rid, reason=reason)
                 record = self.store.get_memory(rid)
                 results.append({"rid": rid, "memory": memory_record_dict(record)})
             except (KeyError, ValueError) as exc:
                 errors.append({"rid": rid, "error": str(exc)})
         return {"action": action, "requested": len(rids), "changed": len(results), "errors": errors, "results": results}
 
-    def _shadow_payload(
+    def _preview_payload(
         self,
         *,
         text: str,
@@ -745,7 +745,7 @@ class DashboardAPI:
             },
         }
 
-    def _apply_shadow_write(
+    def _apply_preview_write(
         self,
         *,
         text: str,

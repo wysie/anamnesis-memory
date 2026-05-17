@@ -60,12 +60,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _handle_synthesize(args, store)
     if args.command == "simulate":
         return _handle_simulate(args, store)
-    if args.command == "shadow-turn":
-        return _handle_shadow_turn(args, store)
-    if args.command == "shadow-batch":
-        return _handle_shadow_batch(args, store)
-    if args.command == "shadow-memory-write":
-        return _handle_shadow_memory_write(args, store)
+    if args.command == "preview-turn":
+        return _handle_preview_turn(args, store)
+    if args.command == "preview-batch":
+        return _handle_preview_batch(args, store)
+    if args.command == "preview-memory-write":
+        return _handle_preview_memory_write(args, store)
     if args.command == "correct":
         return _handle_correct(args, store)
     if args.command == "audit":
@@ -284,39 +284,39 @@ def _build_parser() -> argparse.ArgumentParser:
     simulate.add_argument("--sample-limit", type=int, default=200)
     simulate.add_argument("--json", action="store_true")
 
-    shadow_turn = subparsers.add_parser("shadow-turn", help="Preview intake and recall for one turn without writing memory.")
-    shadow_turn.add_argument("text")
-    shadow_turn.add_argument("--owner", required=True)
-    shadow_turn.add_argument("--platform", required=True)
-    shadow_turn.add_argument("--visibility", action="append", default=["private"])
-    shadow_turn.add_argument("--domain", default="")
-    shadow_turn.add_argument("--limit", type=int, default=5)
-    shadow_turn.add_argument("--json", action="store_true")
+    preview_turn = subparsers.add_parser("preview-turn", help="Preview intake and recall for one turn without writing memory.")
+    preview_turn.add_argument("text")
+    preview_turn.add_argument("--owner", required=True)
+    preview_turn.add_argument("--platform", required=True)
+    preview_turn.add_argument("--visibility", action="append", default=["private"])
+    preview_turn.add_argument("--domain", default="")
+    preview_turn.add_argument("--limit", type=int, default=5)
+    preview_turn.add_argument("--json", action="store_true")
 
-    shadow_batch = subparsers.add_parser("shadow-batch", help="Preview/apply intake and recall over a JSONL or text transcript.")
-    shadow_batch.add_argument("transcript", type=Path)
-    shadow_batch.add_argument("--owner", required=True)
-    shadow_batch.add_argument("--platform", required=True)
-    shadow_batch.add_argument("--visibility", action="append", default=["private"])
-    shadow_batch.add_argument("--domain", default="")
-    shadow_batch.add_argument("--limit", type=int, default=5)
-    shadow_batch.add_argument("--apply", action="store_true")
-    shadow_batch.add_argument("--json", action="store_true")
+    preview_batch = subparsers.add_parser("preview-batch", help="Preview/apply intake and recall over a JSONL or text transcript.")
+    preview_batch.add_argument("transcript", type=Path)
+    preview_batch.add_argument("--owner", required=True)
+    preview_batch.add_argument("--platform", required=True)
+    preview_batch.add_argument("--visibility", action="append", default=["private"])
+    preview_batch.add_argument("--domain", default="")
+    preview_batch.add_argument("--limit", type=int, default=5)
+    preview_batch.add_argument("--apply", action="store_true")
+    preview_batch.add_argument("--json", action="store_true")
 
-    shadow_memory = subparsers.add_parser(
-        "shadow-memory-write",
+    preview_memory = subparsers.add_parser(
+        "preview-memory-write",
         help="Preview/apply the governed policy for a Hermes memory-tool write.",
     )
-    shadow_memory.add_argument("text")
-    shadow_memory.add_argument("--target", default="memory")
-    shadow_memory.add_argument("--origin", default="")
-    shadow_memory.add_argument("--owner", required=True)
-    shadow_memory.add_argument("--platform", required=True)
-    shadow_memory.add_argument("--visibility", default="private")
-    shadow_memory.add_argument("--apply", action="store_true")
-    shadow_memory.add_argument("--json", action="store_true")
+    preview_memory.add_argument("text")
+    preview_memory.add_argument("--target", default="memory")
+    preview_memory.add_argument("--origin", default="")
+    preview_memory.add_argument("--owner", required=True)
+    preview_memory.add_argument("--platform", required=True)
+    preview_memory.add_argument("--visibility", default="private")
+    preview_memory.add_argument("--apply", action="store_true")
+    preview_memory.add_argument("--json", action="store_true")
 
-    correct = subparsers.add_parser("correct", help="Tombstone a memory and replace it with corrected text.")
+    correct = subparsers.add_parser("correct", help="Invalidate a memory and replace it with corrected text.")
     correct.add_argument("rid", help="Active memory rid to correct.")
     correct.add_argument("text", help="Replacement memory text.")
     correct.add_argument("--reason", default="", help="Audit reason for the correction.")
@@ -328,11 +328,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
     maintenance = subparsers.add_parser("maintenance", help="Run local memory hygiene tasks.")
     maintenance_sub = maintenance.add_subparsers(dest="maintenance_command", required=True)
-    shadow = maintenance_sub.add_parser("shadow-duplicates", help="Mark near-duplicate active memories as superseded.")
-    shadow.add_argument("--owner")
-    shadow.add_argument("--domain")
-    shadow.add_argument("--threshold", type=float, default=0.9)
-    shadow.add_argument("--json", action="store_true")
+    supersede = maintenance_sub.add_parser("supersede-duplicates", help="Mark near-duplicate active memories as superseded.")
+    supersede.add_argument("--owner")
+    supersede.add_argument("--domain")
+    supersede.add_argument("--threshold", type=float, default=0.9)
+    supersede.add_argument("--json", action="store_true")
 
     autopilot = maintenance_sub.add_parser("autopilot", help="Run safe local memory hygiene tasks.")
     autopilot.add_argument("--owner")
@@ -349,13 +349,13 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 
-def _shadow_platform_scope(text: str, *, platform: str, lifecycle: str) -> str:
+def _preview_platform_scope(text: str, *, platform: str, lifecycle: str) -> str:
     if lifecycle == "sensitive" or is_platform_local_text(text):
         return platform
     return "all"
 
 
-def _shadow_turn_payload(
+def _preview_turn_payload(
     store: Anamnesis,
     *,
     text: str,
@@ -366,7 +366,7 @@ def _shadow_turn_payload(
     limit: int,
 ) -> dict[str, object]:
     decision = classify_intake(text, domain=domain or "")
-    platform_scope = _shadow_platform_scope(
+    platform_scope = _preview_platform_scope(
         text, platform=platform, lifecycle=decision.lifecycle
     )
     simulation = store.simulate_recall(
@@ -399,10 +399,10 @@ def _shadow_turn_payload(
     }
 
 
-def _handle_shadow_turn(args: argparse.Namespace, store: Anamnesis) -> int:
+def _handle_preview_turn(args: argparse.Namespace, store: Anamnesis) -> int:
     payload = {
-        "mode": "shadow",
-        **_shadow_turn_payload(
+        "mode": "preview",
+        **_preview_turn_payload(
             store,
             text=args.text,
             owner=args.owner,
@@ -443,7 +443,7 @@ def _extract_turn_text(line: str) -> str:
     return ""
 
 
-def _apply_shadow_write(
+def _apply_preview_write(
     store: Anamnesis,
     *,
     text: str,
@@ -451,7 +451,7 @@ def _apply_shadow_write(
     visibility: str,
     domain: str,
     payload: dict[str, object],
-    source: str = "shadow_batch",
+    source: str = "preview_batch",
     metadata: dict[str, object] | None = None,
 ) -> dict[str, object] | None:
     would_write = cast(dict[str, object], payload["would_write"])
@@ -482,7 +482,7 @@ def _apply_shadow_write(
             visibility=visibility,
             platform_scope=str(would_write["platform_scope"]),
             domain=domain or str(would_write["lifecycle"]),
-            source="shadow_batch",
+            source="preview_batch",
             confidence=float(would_write["confidence"]),
             why_save=", ".join(cast(list[str], would_write["reasons"])),
             suggested_lifecycle=str(would_write["lifecycle"]),
@@ -491,7 +491,7 @@ def _apply_shadow_write(
     return None
 
 
-def _handle_shadow_batch(args: argparse.Namespace, store: Anamnesis) -> int:
+def _handle_preview_batch(args: argparse.Namespace, store: Anamnesis) -> int:
     turns: list[dict[str, object]] = []
     summary = {"total": 0, "accept": 0, "inbox": 0, "reject": 0}
     reason_counts: dict[str, int] = {}
@@ -499,7 +499,7 @@ def _handle_shadow_batch(args: argparse.Namespace, store: Anamnesis) -> int:
         text = _extract_turn_text(line)
         if not text:
             continue
-        payload = _shadow_turn_payload(
+        payload = _preview_turn_payload(
             store,
             text=text,
             owner=args.owner,
@@ -516,18 +516,18 @@ def _handle_shadow_batch(args: argparse.Namespace, store: Anamnesis) -> int:
             reason_counts[reason] = reason_counts.get(reason, 0) + 1
         applied = None
         if args.apply:
-            applied = _apply_shadow_write(
+            applied = _apply_preview_write(
                 store,
                 text=text,
                 owner=args.owner,
                 visibility=(args.visibility or ["private"])[0],
                 domain=args.domain or "",
                 payload=payload,
-                metadata={"shadow_batch_applied": True},
+                metadata={"preview_batch_applied": True},
             )
         turns.append({"line": index, **payload, "applied": applied})
     result = {
-        "mode": "shadow_batch",
+        "mode": "preview_batch",
         "apply": bool(args.apply),
         "summary": summary,
         "reason_counts": reason_counts,
@@ -540,8 +540,8 @@ def _handle_shadow_batch(args: argparse.Namespace, store: Anamnesis) -> int:
     return 0
 
 
-def _handle_shadow_memory_write(args: argparse.Namespace, store: Anamnesis) -> int:
-    payload = _shadow_turn_payload(
+def _handle_preview_memory_write(args: argparse.Namespace, store: Anamnesis) -> int:
+    payload = _preview_turn_payload(
         store,
         text=args.text,
         owner=args.owner,
@@ -550,14 +550,14 @@ def _handle_shadow_memory_write(args: argparse.Namespace, store: Anamnesis) -> i
         domain=args.target,
         limit=1,
     )
-    payload["mode"] = "shadow_memory_write"
+    payload["mode"] = "preview_memory_write"
     input_payload = cast(dict[str, object], payload["input"])
     input_payload["target"] = args.target
     input_payload["origin"] = args.origin
     input_payload["source"] = "hermes_memory_tool"
     applied = None
     if args.apply:
-        applied = _apply_shadow_write(
+        applied = _apply_preview_write(
             store,
             text=args.text,
             owner=args.owner,
@@ -565,7 +565,7 @@ def _handle_shadow_memory_write(args: argparse.Namespace, store: Anamnesis) -> i
             domain=args.target,
             payload=payload,
             source="hermes_memory_tool",
-            metadata={"origin": args.origin, "shadow_memory_write_applied": True},
+            metadata={"origin": args.origin, "preview_memory_write_applied": True},
         )
     result = {**payload, "apply": bool(args.apply), "applied": applied}
     if args.json:
@@ -685,20 +685,20 @@ def _maintenance_report(store: Anamnesis, *, limit: int) -> list[dict[str, objec
 
 
 def _handle_maintenance(args: argparse.Namespace, store: Anamnesis) -> int:
-    if args.maintenance_command == "shadow-duplicates":
-        shadowed = store.shadow_duplicate_memories(
+    if args.maintenance_command == "supersede-duplicates":
+        superseded = store.supersede_duplicate_memories(
             owner=args.owner, domain=args.domain, threshold=args.threshold
         )
-        payload = {"shadowed": shadowed}
+        payload = {"superseded": superseded}
         if args.json:
             print(json.dumps(payload, sort_keys=True))
         else:
-            if not shadowed:
+            if not superseded:
                 print("no duplicate memories superseded")
             else:
-                for item in shadowed:
+                for item in superseded:
                     print(
-                        f"superseded={item['shadowed_rid']} canonical={item['canonical_rid']} overlap={item['overlap']}"
+                        f"superseded={item['superseded_rid']} canonical={item['canonical_rid']} overlap={item['overlap']}"
                     )
         return 0
     if args.maintenance_command == "autopilot":
@@ -708,15 +708,15 @@ def _handle_maintenance(args: argparse.Namespace, store: Anamnesis) -> int:
             owner=args.owner,
             domain=args.domain,
         )
-        shadowed = store.shadow_duplicate_memories(
+        superseded = store.supersede_duplicate_memories(
             owner=args.owner, domain=args.domain, threshold=args.duplicate_threshold
         )
         payload = {
             "expired_inbox": [_inbox_item_dict(item) for item in expired],
-            "shadowed_duplicates": shadowed,
+            "superseded_duplicates": superseded,
             "summary": {
                 "expired_inbox": len(expired),
-                "shadowed_duplicates": len(shadowed),
+                "superseded_duplicates": len(superseded),
             },
         }
         _record_maintenance_run(store, payload)
@@ -724,7 +724,7 @@ def _handle_maintenance(args: argparse.Namespace, store: Anamnesis) -> int:
             print(json.dumps(payload, sort_keys=True))
         else:
             print(
-                f"expired_inbox={len(expired)} superseded_duplicates={len(shadowed)}"
+                f"expired_inbox={len(expired)} superseded_duplicates={len(superseded)}"
             )
         return 0
     if args.maintenance_command == "report":
@@ -1467,7 +1467,7 @@ def _seed_embedding_benchmark_fixture(
             domain="benchmark",
             source="embedding-benchmark",
         )
-        tombstoned = store.add_memory(
+        invalidated = store.add_memory(
             "Benchmark invalidated memory about smart-home device control.",
             owner="benchmark",
             visibility="private",
@@ -1475,7 +1475,7 @@ def _seed_embedding_benchmark_fixture(
             domain="benchmark",
             source="embedding-benchmark",
         )
-        store.tombstone(tombstoned.rid, reason="embedding benchmark adversarial fixture")
+        store.invalidate(invalidated.rid, reason="embedding benchmark adversarial fixture")
         cases.extend(
             [
                 {
@@ -1486,7 +1486,7 @@ def _seed_embedding_benchmark_fixture(
                 {
                     "query": "invalidated smart-home device control",
                     "expected_rids": [],
-                    "forbidden_rids": [tombstoned.rid],
+                    "forbidden_rids": [invalidated.rid],
                 },
             ]
         )

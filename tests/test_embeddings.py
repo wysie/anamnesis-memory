@@ -172,7 +172,7 @@ def test_project_recall_allows_test_command_queries(tmp_path):
     assert recalled[0].record.rid == record.rid
 
 
-def test_vector_recall_cannot_bypass_scope_or_tombstones(tmp_path):
+def test_vector_recall_cannot_bypass_scope_or_invalidates(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     embedder = KeywordEmbedder(
         dimensions=("token", "orchid", "vault", "secret"),
@@ -196,7 +196,7 @@ def test_vector_recall_cannot_bypass_scope_or_tombstones(tmp_path):
         platform_scope="whatsapp",
         domain="privacy",
     )
-    store.tombstone(obsolete.rid, reason="obsolete")
+    store.invalidate(obsolete.rid, reason="obsolete")
     store.embed_missing(embedder)
 
     recalled = store.recall(
@@ -524,7 +524,7 @@ def test_semantic_only_policy_uses_ann_without_returning_fts_only_results(tmp_pa
     assert keyword.rid not in recalled_ids
 
 
-def test_ann_candidates_cannot_bypass_scope_or_tombstones(tmp_path):
+def test_ann_candidates_cannot_bypass_scope_or_invalidates(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     embedder = KeywordEmbedder(
         dimensions=("token", "orchid", "vault"),
@@ -542,7 +542,7 @@ def test_ann_candidates_cannot_bypass_scope_or_tombstones(tmp_path):
         platform_scope="whatsapp",
         domain="privacy",
     )
-    store.tombstone(obsolete.rid, reason="obsolete")
+    store.invalidate(obsolete.rid, reason="obsolete")
     store.embed_missing(embedder)
     index = ExactVectorIndex(model_id=embedder.model_id, dimension=embedder.dimension)
     store.rebuild_vector_index(embedder, index)
@@ -621,12 +621,12 @@ def test_sqlite_vec_vector_index_prefilters_metadata(tmp_path):
             domain="household",
         ),
         VectorIndexRow(
-            rid="tombstone",
+            rid="invalidate",
             vector=[1.0, 0.0, 0.0],
             owner="primary",
             visibility="private",
             platform_scope="whatsapp",
-            status="tombstoned",
+            status="invalidated",
             domain="household",
         ),
         VectorIndexRow(
@@ -669,7 +669,7 @@ def test_rebuild_vector_index_stores_governance_metadata_for_prefiltering(tmp_pa
         platform_scope="whatsapp",
         domain="household",
     )
-    store.tombstone(wrong_owner.rid, reason="obsolete")
+    store.invalidate(wrong_owner.rid, reason="obsolete")
     store.embed_missing(embedder)
     index = SQLiteVecVectorIndex(
         db_path=tmp_path / "vectors.db",

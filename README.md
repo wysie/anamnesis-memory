@@ -178,20 +178,20 @@ record = store.accept_inbox_item(item.cid)
 
 ## Preview checks
 
-Use `shadow-turn` to preview what Anamnesis would save, inbox, reject, and inject for a turn without mutating the DB. The command name is historical; user-facing UI calls this Preview.
+Use `preview-turn` to preview what Anamnesis would save, inbox, reject, and inject for a turn without mutating the DB. The same Preview terminology is used by the CLI, dashboard, API, and backend.
 
 ```bash
-anamnesis --db ~/.anamnesis/anamnesis.db shadow-turn \
+anamnesis --db ~/.anamnesis/anamnesis.db preview-turn \
   "Primary user prefers cross-platform memory by default." \
   --owner primary \
   --platform whatsapp \
   --json
 ```
 
-Use `shadow-batch` to preview a JSONL/text transcript. Add `--apply` only when you intentionally want accepted items written and inbox candidates proposed:
+Use `preview-batch` to preview a JSONL/text transcript. Add `--apply` only when you intentionally want accepted items written and inbox candidates proposed:
 
 ```bash
-anamnesis --db ~/.anamnesis/anamnesis.db shadow-batch transcript.jsonl \
+anamnesis --db ~/.anamnesis/anamnesis.db preview-batch transcript.jsonl \
   --owner primary \
   --platform whatsapp \
   --json

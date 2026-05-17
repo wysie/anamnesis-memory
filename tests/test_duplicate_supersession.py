@@ -1,7 +1,7 @@
 from anamnesis import Anamnesis
 
 
-def test_shadow_duplicate_memories_keeps_best_and_suppresses_duplicates(tmp_path):
+def test_supersede_duplicate_memories_keeps_best_and_suppresses_duplicates(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     canonical = store.add_memory(
         "Primary user prefers local-only WhatsApp memory summaries.",
@@ -26,12 +26,12 @@ def test_shadow_duplicate_memories_keeps_best_and_suppresses_duplicates(tmp_path
         domain="privacy",
     )
 
-    shadowed = store.shadow_duplicate_memories(owner="primary", domain="privacy")
+    superseded = store.supersede_duplicate_memories(owner="primary", domain="privacy")
 
-    assert [item["shadowed_rid"] for item in shadowed] == [duplicate.rid]
-    assert shadowed[0]["canonical_rid"] == canonical.rid
+    assert [item["superseded_rid"] for item in superseded] == [duplicate.rid]
+    assert superseded[0]["canonical_rid"] == canonical.rid
     assert store.get_memory(canonical.rid).status == "active"
-    assert store.get_memory(duplicate.rid).status == "shadowed"
+    assert store.get_memory(duplicate.rid).status == "superseded"
     assert store.get_memory(distinct.rid).status == "active"
 
     recalled = store.recall(
@@ -48,11 +48,11 @@ def test_shadow_duplicate_memories_keeps_best_and_suppresses_duplicates(tmp_path
     assert duplicate.rid not in recalled_rids
 
 
-def test_shadow_duplicate_memories_respects_scope(tmp_path):
+def test_supersede_duplicate_memories_respects_scope(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     primary = store.add_memory("Same text duplicate candidate.", owner="primary", domain="privacy")
     other = store.add_memory("Same text duplicate candidate.", owner="other", domain="privacy")
 
-    assert store.shadow_duplicate_memories(owner="primary", domain="privacy") == []
+    assert store.supersede_duplicate_memories(owner="primary", domain="privacy") == []
     assert store.get_memory(primary.rid).status == "active"
     assert store.get_memory(other.rid).status == "active"

@@ -54,7 +54,7 @@ def seed_core_behavior_fixture(store: Anamnesis) -> Fixture:
         domain="task-state",
         source="fixture",
     )
-    store.tombstone(stale_task.rid, reason="temporary task state")
+    store.invalidate(stale_task.rid, reason="temporary task state")
 
     rejected = store.propose_memory(
         "Temporary debug port is 54321.",
@@ -101,7 +101,7 @@ def seed_core_behavior_fixture(store: Anamnesis) -> Fixture:
         "owner_privacy_rid": owner_private.rid,
         "delegate_permission_rid": delegate_permission.rid,
         "collaborator_access_rid": collaborator_access.rid,
-        "tombstoned_task_rid": stale_task.rid,
+        "invalidated_task_rid": stale_task.rid,
         "rejected_task_cid": rejected.cid,
         "duplicate_candidate_cid": duplicate.cid,
         "resolved_loser_rid": old_permission.rid,
@@ -144,13 +144,13 @@ def build_core_behavior_suite(store: Anamnesis, fixture: Fixture) -> CoreBehavio
             domain="privacy",
         ),
         RecallBenchmarkCase(
-            name="tombstoned_memory_stays_hidden",
+            name="invalidated_memory_stays_hidden",
             query="temporary task PID",
             owner="owner",
             platform="cli",
             allowed_visibility={"private"},
             expected_rids=set(),
-            forbidden_rids={fixture["tombstoned_task_rid"]},
+            forbidden_rids={fixture["invalidated_task_rid"]},
             domain="task-state",
         ),
         RecallBenchmarkCase(

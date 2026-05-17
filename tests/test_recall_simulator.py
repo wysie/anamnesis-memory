@@ -24,14 +24,14 @@ def test_recall_simulator_explains_included_and_excluded_memories(tmp_path):
         platform_scope="cli",
         domain="privacy",
     )
-    tombstoned = store.add_memory(
+    invalidated = store.add_memory(
         "Primary user old WhatsApp memory obsolete.",
         owner="primary",
         visibility="private",
         platform_scope="whatsapp",
         domain="privacy",
     )
-    store.tombstone(tombstoned.rid, reason="obsolete")
+    store.invalidate(invalidated.rid, reason="obsolete")
     pending = store.propose_memory(
         "Primary user maybe wants temporary WhatsApp memory.",
         owner="primary",
@@ -56,5 +56,5 @@ def test_recall_simulator_explains_included_and_excluded_memories(tmp_path):
     assert "included_in_recall" in simulation["included"][0]["reasons"]
     assert "owner_mismatch" in excluded_by_id[wrong_owner.rid]["exclusion_reasons"]
     assert "platform_scope_mismatch" in excluded_by_id[wrong_platform.rid]["exclusion_reasons"]
-    assert "status_tombstoned" in excluded_by_id[tombstoned.rid]["exclusion_reasons"]
+    assert "status_invalidated" in excluded_by_id[invalidated.rid]["exclusion_reasons"]
     assert "inbox_pending_not_recallable" in excluded_by_id[pending.cid]["exclusion_reasons"]

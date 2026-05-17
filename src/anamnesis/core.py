@@ -188,7 +188,19 @@ class Anamnesis:
                 );
                 """
             )
+            self._migrate_lifecycle_terms(conn)
             self._migrate_embedding_schema(conn)
+
+    def _migrate_lifecycle_terms(self, conn: sqlite3.Connection) -> None:
+        """Normalize pre-release lifecycle terms to the public vocabulary."""
+        conn.execute("UPDATE memories SET status='invalidated' WHERE status='tombstoned'")
+        conn.execute("UPDATE memories SET status='superseded' WHERE status='shadowed'")
+        conn.execute(
+            "UPDATE audit_log SET event_type='memory_invalidated' WHERE event_type='memory_tombstoned'"
+        )
+        conn.execute(
+            "UPDATE audit_log SET event_type='memory_superseded' WHERE event_type='memory_shadowed'"
+        )
 
     def _migrate_embedding_schema(self, conn: sqlite3.Connection) -> None:
         """Ensure embeddings are keyed by both memory and model.
@@ -386,7 +398,7 @@ class Anamnesis:
 
 
 
-    def preview_duplicate_shadowing(
+    def preview_duplicate_supersession(
         self,
         *,
         owner: str | None = None,
@@ -394,17 +406,17 @@ class Anamnesis:
         threshold: float = 0.9,
         example_limit: int = 25,
     ) -> dict[str, Any]:
-        """Preview near-duplicate active memories that would be shadowed."""
+        """Preview near-duplicate active memories that would be superseded."""
         records = self._active_memory_records(owner=owner, domain=domain)
         term_sets = {record.rid: set(self._terms(record.text)) for record in records}
         matches: list[dict[str, Any]] = []
-        already_shadowed: set[str] = set()
+        already_superseded: set[str] = set()
         compared_pairs = 0
         for idx, left in enumerate(records):
-            if left.rid in already_shadowed:
+            if left.rid in already_superseded:
                 continue
             for right in records[idx + 1 :]:
-                if right.rid in already_shadowed:
+                if right.rid in already_superseded:
                     continue
                 if not self._same_duplicate_scope(left, right):
                     continue
@@ -416,45 +428,45 @@ class Anamnesis:
                 matches.append(
                     {
                         "canonical_rid": canonical.rid,
-                        "shadowed_rid": duplicate.rid,
+                        "superseded_rid": duplicate.rid,
                         "overlap": round(overlap, 4),
                         "canonical_text": canonical.text,
-                        "shadowed_text": duplicate.text,
+                        "superseded_text": duplicate.text,
                         "owner": canonical.owner,
                         "domain": canonical.domain,
                         "platform_scope": canonical.platform_scope,
                     }
                 )
-                already_shadowed.add(duplicate.rid)
+                already_superseded.add(duplicate.rid)
                 if duplicate.rid == left.rid:
                     break
         return {
             "active_memories_considered": len(records),
             "compared_pairs": compared_pairs,
-            "would_shadow_count": len(matches),
+            "would_supersede_count": len(matches),
             "examples": matches[: max(0, example_limit)],
             "examples_truncated": max(0, len(matches) - max(0, example_limit)),
         }
 
-    def shadow_duplicate_memories(
+    def supersede_duplicate_memories(
         self,
         *,
         owner: str | None = None,
         domain: str | None = None,
         threshold: float = 0.9,
     ) -> list[dict[str, Any]]:
-        """Mark lower-quality near-duplicate active memories as shadowed."""
+        """Mark lower-quality near-duplicate active memories as superseded."""
         records = self._active_memory_records(owner=owner, domain=domain)
         term_sets = {record.rid: set(self._terms(record.text)) for record in records}
-        shadowed: list[dict[str, Any]] = []
-        already_shadowed: set[str] = set()
+        superseded: list[dict[str, Any]] = []
+        already_superseded: set[str] = set()
         now = time.time()
         with self._connect() as conn:
             for idx, left in enumerate(records):
-                if left.rid in already_shadowed:
+                if left.rid in already_superseded:
                     continue
                 for right in records[idx + 1 :]:
-                    if right.rid in already_shadowed:
+                    if right.rid in already_superseded:
                         continue
                     if not self._same_duplicate_scope(left, right):
                         continue
@@ -463,27 +475,27 @@ class Anamnesis:
                         continue
                     canonical, duplicate = self._preferred_duplicate_canonical(left, right)
                     conn.execute(
-                        "UPDATE memories SET status='shadowed', updated_at=? WHERE rid=?",
+                        "UPDATE memories SET status='superseded', updated_at=? WHERE rid=?",
                         (now, duplicate.rid),
                     )
                     self._audit(
                         conn,
                         duplicate.rid,
-                        "memory_shadowed",
+                        "memory_superseded",
                         reason="duplicate",
                         metadata={"canonical_rid": canonical.rid, "overlap": round(overlap, 4)},
                     )
-                    shadowed.append(
+                    superseded.append(
                         {
                             "canonical_rid": canonical.rid,
-                            "shadowed_rid": duplicate.rid,
+                            "superseded_rid": duplicate.rid,
                             "overlap": round(overlap, 4),
                         }
                     )
-                    already_shadowed.add(duplicate.rid)
+                    already_superseded.add(duplicate.rid)
                     if duplicate.rid == left.rid:
                         break
-        return shadowed
+        return superseded
 
     def _active_memory_records(
         self, *, owner: str | None = None, domain: str | None = None
@@ -1191,16 +1203,16 @@ class Anamnesis:
             reasons.append("suppressed_as_non_durable_or_question_only")
         return reasons
 
-    def tombstone(self, rid: str, *, reason: str = "") -> None:
+    def invalidate(self, rid: str, *, reason: str = "") -> None:
         ts = time.time()
         with self._connect() as conn:
             cur = conn.execute(
-                "UPDATE memories SET status='tombstoned', updated_at=? WHERE rid=?",
+                "UPDATE memories SET status='invalidated', updated_at=? WHERE rid=?",
                 (ts, rid),
             )
             if cur.rowcount == 0:
                 raise KeyError(rid)
-            self._audit(conn, rid, "memory_tombstoned", reason=reason)
+            self._audit(conn, rid, "memory_invalidated", reason=reason)
 
     def correct_memory(
         self,
@@ -1226,7 +1238,7 @@ class Anamnesis:
         replacement_rid = str(uuid.uuid4())
         with self._connect() as conn:
             conn.execute(
-                "UPDATE memories SET status='tombstoned', updated_at=? WHERE rid=?",
+                "UPDATE memories SET status='invalidated', updated_at=? WHERE rid=?",
                 (ts, old.rid),
             )
             conn.execute(
@@ -1263,7 +1275,7 @@ class Anamnesis:
             self._audit(
                 conn,
                 old.rid,
-                "memory_tombstoned",
+                "memory_invalidated",
                 reason=f"correction:{replacement_rid}:{reason}",
             )
             self._audit(
@@ -1383,7 +1395,7 @@ class Anamnesis:
             )
             now = time.time()
             conn.execute(
-                "UPDATE memories SET status='tombstoned', updated_at=? WHERE rid=?",
+                "UPDATE memories SET status='invalidated', updated_at=? WHERE rid=?",
                 (now, loser_rid),
             )
             conn.execute(
@@ -1393,7 +1405,7 @@ class Anamnesis:
             self._audit(
                 conn,
                 loser_rid,
-                "memory_tombstoned",
+                "memory_invalidated",
                 reason=f"contradiction:{conflict_id}:{reason}",
             )
             self._audit(

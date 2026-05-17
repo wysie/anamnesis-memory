@@ -2,7 +2,7 @@ from anamnesis import Anamnesis
 from anamnesis.behavior_benchmarks import build_core_behavior_suite, seed_core_behavior_fixture
 
 
-def test_core_behavior_suite_covers_privacy_scope_tombstones_and_rejections(tmp_path):
+def test_core_behavior_suite_covers_privacy_scope_invalidates_and_rejections(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     fixture = seed_core_behavior_fixture(store)
 
@@ -14,7 +14,7 @@ def test_core_behavior_suite_covers_privacy_scope_tombstones_and_rejections(tmp_
     assert "owner_private_memory_visible_to_owner" in case_names
     assert "delegate_cannot_recall_owner_private_memory" in case_names
     assert "collaborator_cannot_recall_owner_private_memory" in case_names
-    assert "tombstoned_memory_stays_hidden" in case_names
+    assert "invalidated_memory_stays_hidden" in case_names
     assert "rejected_task_state_stays_out_of_recall" in case_names
     assert "resolved_contradiction_keeps_winner_only" in case_names
 

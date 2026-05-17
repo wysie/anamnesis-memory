@@ -4,7 +4,7 @@ from anamnesis import Anamnesis
 from anamnesis.cli import main
 
 
-def test_cli_maintenance_shadow_duplicates(tmp_path, capsys):
+def test_cli_maintenance_preview_duplicates(tmp_path, capsys):
     db_path = tmp_path / "anamnesis.db"
     store = Anamnesis(db_path)
     keep = store.add_memory(
@@ -14,7 +14,7 @@ def test_cli_maintenance_shadow_duplicates(tmp_path, capsys):
         domain="privacy",
         importance=0.9,
     )
-    shadow = store.add_memory(
+    duplicate = store.add_memory(
         "Primary user prefers local-only WhatsApp memory summaries.",
         owner="primary",
         platform_scope="whatsapp",
@@ -28,7 +28,7 @@ def test_cli_maintenance_shadow_duplicates(tmp_path, capsys):
                 "--db",
                 str(db_path),
                 "maintenance",
-                "shadow-duplicates",
+                "supersede-duplicates",
                 "--owner",
                 "primary",
                 "--domain",
@@ -40,12 +40,12 @@ def test_cli_maintenance_shadow_duplicates(tmp_path, capsys):
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["shadowed"] == [
-        {"canonical_rid": keep.rid, "shadowed_rid": shadow.rid, "overlap": 1.0}
+    assert payload["superseded"] == [
+        {"canonical_rid": keep.rid, "superseded_rid": duplicate.rid, "overlap": 1.0}
     ]
 
 
-def test_cli_maintenance_autopilot_expires_and_shadows(tmp_path, capsys):
+def test_cli_maintenance_autopilot_expires_and_supersedes(tmp_path, capsys):
     db_path = tmp_path / "anamnesis.db"
     store = Anamnesis(db_path)
     keep = store.add_memory(
@@ -90,11 +90,11 @@ def test_cli_maintenance_autopilot_expires_and_shadows(tmp_path, capsys):
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["expired_inbox"][0]["cid"] == old_item.cid
-    assert payload["shadowed_duplicates"] == [
-        {"canonical_rid": keep.rid, "shadowed_rid": duplicate.rid, "overlap": 1.0}
+    assert payload["superseded_duplicates"] == [
+        {"canonical_rid": keep.rid, "superseded_rid": duplicate.rid, "overlap": 1.0}
     ]
     assert store.get_inbox_item(old_item.cid).decision == "expired"
-    assert store.get_memory(duplicate.rid).status == "shadowed"
+    assert store.get_memory(duplicate.rid).status == "superseded"
 
 
 def test_cli_maintenance_autopilot_bare_command_is_safe_across_scopes(tmp_path, capsys):
@@ -125,10 +125,10 @@ def test_cli_maintenance_autopilot_bare_command_is_safe_across_scopes(tmp_path, 
     assert main(["--db", str(db_path), "maintenance", "autopilot", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["shadowed_duplicates"] == [
-        {"canonical_rid": primary_keep.rid, "shadowed_rid": primary_dup.rid, "overlap": 1.0}
+    assert payload["superseded_duplicates"] == [
+        {"canonical_rid": primary_keep.rid, "superseded_rid": primary_dup.rid, "overlap": 1.0}
     ]
-    assert store.get_memory(primary_dup.rid).status == "shadowed"
+    assert store.get_memory(primary_dup.rid).status == "superseded"
     assert store.get_memory(other.rid).status == "active"
 
 
@@ -145,4 +145,4 @@ def test_cli_maintenance_report_lists_recent_autopilot_runs(tmp_path, capsys):
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["runs"][0]["event_type"] == "maintenance_autopilot"
-    assert payload["runs"][0]["summary"] == {"expired_inbox": 1, "shadowed_duplicates": 0}
+    assert payload["runs"][0]["summary"] == {"expired_inbox": 1, "superseded_duplicates": 0}

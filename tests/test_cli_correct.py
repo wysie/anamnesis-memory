@@ -6,7 +6,7 @@ from anamnesis import Anamnesis
 from anamnesis.cli import main
 
 
-def test_cli_correct_tombstones_and_replaces_memory(tmp_path, capsys):
+def test_cli_correct_invalidates_and_replaces_memory(tmp_path, capsys):
     db_path = tmp_path / "anamnesis.db"
     store = Anamnesis(db_path)
     old = store.add_memory(
@@ -37,7 +37,7 @@ def test_cli_correct_tombstones_and_replaces_memory(tmp_path, capsys):
 
     replacement = Anamnesis(db_path).get_memory(payload["replacement"]["rid"])
     assert payload["old"]["rid"] == old.rid
-    assert payload["old"]["status"] == "tombstoned"
+    assert payload["old"]["status"] == "invalidated"
     assert payload["replacement"]["text"] == "Primary user prefers concise updates with next steps."
     assert replacement.metadata["corrects_rid"] == old.rid
     assert replacement.metadata["correction_reason"] == "user correction"

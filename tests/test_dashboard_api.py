@@ -49,7 +49,7 @@ def test_dashboard_overview_memories_inbox_and_audit(tmp_path):
         domain="ops",
         source="test",
     )
-    store.tombstone(second.rid, reason="temporary")
+    store.invalidate(second.rid, reason="temporary")
     inbox = store.propose_memory(
         "Potential preference needs review.",
         owner="primary",
@@ -75,7 +75,7 @@ def test_dashboard_overview_memories_inbox_and_audit(tmp_path):
     status, overview = _json(api, "GET", "/api/overview")
     assert status == 200
     assert overview["counts"]["memories"]["active"] == 1
-    assert overview["counts"]["memories"]["tombstoned"] == 1
+    assert overview["counts"]["memories"]["invalidated"] == 1
     assert overview["counts"]["inbox"]["pending"] == 2
     assert overview["recent_memories"][0]["rid"] == first.rid
     assert {item["cid"] for item in overview["recent_inbox"]} >= {inbox.cid, low_confidence_inbox.cid}
@@ -153,10 +153,10 @@ def test_dashboard_overview_memories_inbox_and_audit(tmp_path):
     assert status == 200
     assert batch_rejected["changed"] == 1
 
-    status, batch_memory = _json(api, "POST", "/api/memories/batch", {"action": "tombstone", "rids": [first.rid]})
+    status, batch_memory = _json(api, "POST", "/api/memories/batch", {"action": "invalidate", "rids": [first.rid]})
     assert status == 200
     assert batch_memory["changed"] == 1
-    assert batch_memory["results"][0]["memory"]["status"] == "tombstoned"
+    assert batch_memory["results"][0]["memory"]["status"] == "invalidated"
 
     status, audit = _json(api, "GET", f"/api/audit/{first.rid}")
     assert status == 200
@@ -164,7 +164,7 @@ def test_dashboard_overview_memories_inbox_and_audit(tmp_path):
     assert audit["events"][0]["event_type"] == "memory_added"
 
 
-def test_dashboard_shadow_and_correction_routes_are_dry_run_by_default(tmp_path):
+def test_dashboard_preview_and_correction_routes_are_dry_run_by_default(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     original = store.add_memory(
         "Primary user prefers verbose weekly reports.",
@@ -176,10 +176,10 @@ def test_dashboard_shadow_and_correction_routes_are_dry_run_by_default(tmp_path)
     )
     api = DashboardAPI(store)
 
-    status, shadow = _json(
+    status, preview = _json(
         api,
         "POST",
-        "/api/shadow-memory-write",
+        "/api/preview-memory-write",
         {
             "text": "How are U considering what's good to store or not without an llm",
             "owner": "primary",
@@ -189,21 +189,21 @@ def test_dashboard_shadow_and_correction_routes_are_dry_run_by_default(tmp_path)
         },
     )
     assert status == 200
-    assert shadow["mode"] == "shadow_memory_write"
-    assert shadow["would_write"]["action"] == "reject"
-    assert shadow["input"]["source"] == "hermes_memory_tool"
-    assert shadow["apply"] is False
+    assert preview["mode"] == "preview_memory_write"
+    assert preview["would_write"]["action"] == "reject"
+    assert preview["input"]["source"] == "hermes_memory_tool"
+    assert preview["apply"] is False
     with store._connect() as conn:  # noqa: SLF001 - assert dry-run boundary.
         assert conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0] == 1
 
     status, turn = _json(
         api,
         "POST",
-        "/api/shadow-turn",
+        "/api/preview-turn",
         {"text": "Primary user prefers concise updates.", "owner": "primary", "platform": "whatsapp"},
     )
     assert status == 200
-    assert turn["mode"] == "shadow"
+    assert turn["mode"] == "preview"
     assert turn["would_write"]["platform_scope"] == "all"
 
     status, corrected = _json(
@@ -213,7 +213,7 @@ def test_dashboard_shadow_and_correction_routes_are_dry_run_by_default(tmp_path)
         {"rid": original.rid, "text": "Primary user prefers concise updates.", "reason": "user correction"},
     )
     assert status == 200
-    assert corrected["old"]["status"] == "tombstoned"
+    assert corrected["old"]["status"] == "invalidated"
     assert corrected["replacement"]["text"] == "Primary user prefers concise updates."
 
 
@@ -224,7 +224,7 @@ def test_dashboard_returns_json_errors(tmp_path):
     assert status == 404
     assert payload == {"error": "not_found", "message": "missing"}
 
-    status, payload = _json(api, "POST", "/api/shadow-turn", {"owner": "primary"})
+    status, payload = _json(api, "POST", "/api/preview-turn", {"owner": "primary"})
     assert status == 400
     assert payload["error"] == "bad_request"
     assert "text" in payload["message"]
@@ -296,7 +296,7 @@ def test_dashboard_operational_surfaces(tmp_path, monkeypatch):
     assert dry_run["summary"]["would_supersede_duplicates"] == 1
     assert dry_run["would_expire_inbox"][0]["proposed_text"] == "Old pending proposal."
     assert dry_run["would_supersede_duplicates"][0]["canonical_text"] == "Primary user prefers local-first memory dashboards."
-    assert dry_run["would_supersede_duplicates"][0]["shadowed_text"] == "Primary user prefers local-first memory dashboards."
+    assert dry_run["would_supersede_duplicates"][0]["superseded_text"] == "Primary user prefers local-first memory dashboards."
 
     store.recall("local-first dashboards", owner="primary", platform="whatsapp", allowed_visibility={"private"})
     status, runtime_test = _json(

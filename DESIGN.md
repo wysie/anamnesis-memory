@@ -65,7 +65,7 @@ Canonical curated memory rows.
 - `source`: source system/importer
 - `importance`: 0.0–1.0
 - `confidence`: 0.0–1.0
-- `status`: `active | tombstoned | shadowed | pending` (displayed as Active, Invalidated, Superseded, Pending)
+- `status`: `active | invalidated | superseded | pending` (displayed as Active, Invalidated, Superseded, Pending)
 - `created_at`, `updated_at`, `last_access`: unix timestamps
 - `ttl_days`: optional suggested decay TTL
 - `metadata_json`: optional JSON payload, including provenance fields such as `source_platform` when the memory was captured from a platform-specific turn
@@ -202,7 +202,7 @@ Anamnesis must be compared with current baselines on:
 - Add semantic memory with owner/platform/visibility metadata.
 - Recall by keyword through FTS5.
 - Enforce scope before ranking.
-- Tombstone memory and exclude it from recall.
+- Invalidate memory and exclude it from recall.
 - Return explainable recall reasons.
 - Record recall/write/invalidate audit events.
 - Full test coverage for the above.

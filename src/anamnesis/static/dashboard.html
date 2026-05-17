@@ -28,7 +28,7 @@
         <button class="nav-item active" type="button" data-view="overview">Overview</button>
         <button class="nav-item" type="button" data-view="memories">Memories</button>
         <button class="nav-item" type="button" data-view="inbox">Inbox</button>
-        <button class="nav-item" type="button" data-view="shadow">Preview Tools</button>
+        <button class="nav-item" type="button" data-view="preview">Preview Tools</button>
         <button class="nav-item" type="button" data-view="simulator">Recall Simulator</button>
         <button class="nav-item" type="button" data-view="maintenance">Maintenance</button>
         <button class="nav-item" type="button" data-view="runtime">Runtime</button>
@@ -47,7 +47,7 @@
             <p class="eyebrow">Overview</p>
             <h1>Memory state at a glance</h1>
           </div>
-          <button class="button primary" type="button" data-view="shadow">Run preview</button>
+          <button class="button primary" type="button" data-view="preview">Run preview</button>
         </div>
         <div class="metric-grid" id="overviewMetrics" aria-live="polite"></div>
         <div class="two-col">
@@ -70,13 +70,13 @@
         <div class="toolbar">
           <label>Owner <select id="memoryOwner"><option value="">All owners</option></select></label>
           <label>Search <input id="memorySearch" autocomplete="off" placeholder="Search memory text"></label>
-          <label>Status <select id="memoryStatus"><option value="active">Active</option><option value="shadowed">Superseded</option><option value="tombstoned">Invalidated</option></select></label>
+          <label>Status <select id="memoryStatus"><option value="active">Active</option><option value="superseded">Superseded</option><option value="invalidated">Invalidated</option></select></label>
           <label>Page size <select id="memoryLimit"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option><option value="200">200</option></select></label>
         </div>
         <div class="batchbar">
           <label class="checkline"><input type="checkbox" id="selectAllMemories"> Select page</label>
           <span id="memoryPageInfo" class="page-info">0 results</span>
-          <button class="button danger" type="button" id="batchTombstoneMemoriesButton">Invalidate selected</button>
+          <button class="button danger" type="button" id="batchInvalidateMemoriesButton">Invalidate selected</button>
           <button class="button ghost" type="button" id="prevMemoriesButton">Previous</button>
           <button class="button ghost" type="button" id="nextMemoriesButton">Next</button>
         </div>
@@ -107,19 +107,19 @@
         <div class="card-grid" id="inboxGrid"></div>
       </section>
 
-      <section class="view" id="view-shadow">
+      <section class="view" id="view-preview">
         <div class="section-head">
           <div><p class="eyebrow">Preview Tools</p><h1>Preview memory writes</h1></div>
         </div>
         <section class="panel form-panel">
-          <label>Text to test<textarea id="shadowText" rows="5" placeholder="Paste a proposed memory or transcript line"></textarea></label>
+          <label>Text to test<textarea id="previewText" rows="5" placeholder="Paste a proposed memory or transcript line"></textarea></label>
           <div class="toolbar">
-            <label>Owner <select id="shadowOwner"><option value="primary">primary</option></select></label>
-            <label>Platform <select id="shadowPlatform"><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="cli">CLI</option><option value="local">Local</option><option value="all">All platforms</option></select></label>
-            <label>Target <select id="shadowTarget"><option value="memory">General memory</option><option value="preference">Preference</option><option value="work">Work</option><option value="project">Project</option><option value="infrastructure">Infrastructure</option><option value="integration">Integration</option><option value="ops">Ops</option><option value="personal">Personal</option></select></label>
+            <label>Owner <select id="previewOwner"><option value="primary">primary</option></select></label>
+            <label>Platform <select id="previewPlatform"><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="cli">CLI</option><option value="local">Local</option><option value="all">All platforms</option></select></label>
+            <label>Target <select id="previewTarget"><option value="memory">General memory</option><option value="preference">Preference</option><option value="work">Work</option><option value="project">Project</option><option value="infrastructure">Infrastructure</option><option value="integration">Integration</option><option value="ops">Ops</option><option value="personal">Personal</option></select></label>
           </div>
-          <button class="button primary" type="button" id="runShadowButton">Run preview</button>
-          <pre class="result" id="shadowResult" aria-live="polite"></pre>
+          <button class="button primary" type="button" id="runPreviewButton">Run preview</button>
+          <pre class="result" id="previewResult" aria-live="polite"></pre>
         </section>
       </section>
 

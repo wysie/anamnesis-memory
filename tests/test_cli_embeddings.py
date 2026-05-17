@@ -240,7 +240,7 @@ def test_embeddings_sqlite_vec_index_status_and_rebuild(tmp_path, capsys):
     assert after["stale"] == 0
     assert after["rebuild_required"] is False
 
-    Anamnesis(db_path).tombstone(record.rid, reason="metadata stale test")
+    Anamnesis(db_path).invalidate(record.rid, reason="metadata stale test")
     assert main([
         "--db",
         str(db_path),

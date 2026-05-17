@@ -45,6 +45,32 @@ def test_add_memory_persists_record_and_fts(tmp_path):
     assert store.audit_events(record.rid)[0]["event_type"] == "memory_added"
 
 
+def test_migrates_pre_release_lifecycle_terms(tmp_path):
+    db_path = tmp_path / "anamnesis.db"
+    store = Anamnesis(db_path)
+    obsolete = store.add_memory("Old status memory.", owner="primary")
+    duplicate = store.add_memory("Old duplicate memory.", owner="primary")
+    with store._connect() as conn:  # noqa: SLF001 - verifies migration compatibility.
+        conn.execute("UPDATE memories SET status='tombstoned' WHERE rid=?", (obsolete.rid,))
+        conn.execute("UPDATE memories SET status='shadowed' WHERE rid=?", (duplicate.rid,))
+        conn.execute(
+            "INSERT INTO audit_log (rid,event_type,reason,created_at,metadata_json) VALUES (?,?,?,?,?)",
+            (obsolete.rid, "memory_tombstoned", "legacy", 1.0, "{}"),
+        )
+        conn.execute(
+            "INSERT INTO audit_log (rid,event_type,reason,created_at,metadata_json) VALUES (?,?,?,?,?)",
+            (duplicate.rid, "memory_shadowed", "legacy", 1.0, "{}"),
+        )
+
+    migrated = Anamnesis(db_path)
+
+    assert migrated.get_memory(obsolete.rid).status == "invalidated"
+    assert migrated.get_memory(duplicate.rid).status == "superseded"
+    events = {event["event_type"] for event in migrated.audit_events(obsolete.rid) + migrated.audit_events(duplicate.rid)}
+    assert "memory_invalidated" in events
+    assert "memory_superseded" in events
+
+
 def test_recall_enforces_scope_before_ranking(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     visible = store.add_memory(
@@ -96,23 +122,23 @@ def test_recall_enforces_scope_before_ranking(tmp_path):
     assert metadata["result_rids"] == [visible.rid]
 
 
-def test_tombstone_excludes_memory_from_recall_and_audits(tmp_path):
+def test_invalidate_excludes_memory_from_recall_and_audits(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     record = store.add_memory(
-        "This memory should disappear from recall after tombstone.",
+        "This memory should disappear from recall after invalidate.",
         owner="primary",
         visibility="private",
         platform_scope="all",
         source="test",
     )
 
-    store.tombstone(record.rid, reason="obsolete")
+    store.invalidate(record.rid, reason="obsolete")
 
-    recalled = store.recall("disappear tombstone", owner="primary", platform="whatsapp", allowed_visibility={"private"})
+    recalled = store.recall("disappear invalidate", owner="primary", platform="whatsapp", allowed_visibility={"private"})
     assert recalled == []
-    assert store.get_memory(record.rid).status == "tombstoned"
+    assert store.get_memory(record.rid).status == "invalidated"
     events = [e["event_type"] for e in store.audit_events(record.rid)]
-    assert events == ["memory_added", "memory_tombstoned"]
+    assert events == ["memory_added", "memory_invalidated"]
 
 
 def test_propose_memory_creates_pending_inbox_item(tmp_path):
@@ -359,7 +385,7 @@ def test_propose_memory_records_duplicate_hints(tmp_path):
     assert "possible_duplicate" in item.hints
 
 
-def test_correct_memory_tombstones_old_creates_replacement_and_audits(tmp_path):
+def test_correct_memory_invalidates_old_creates_replacement_and_audits(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     old = store.add_memory(
         "Primary user prefers verbose status reports.",
@@ -380,7 +406,7 @@ def test_correct_memory_tombstones_old_creates_replacement_and_audits(tmp_path):
         reason="user correction",
     )
 
-    assert store.get_memory(old.rid).status == "tombstoned"
+    assert store.get_memory(old.rid).status == "invalidated"
     assert replacement.rid != old.rid
     assert replacement.text == "Primary user prefers concise status reports with concrete next steps."
     assert replacement.owner == old.owner
@@ -408,7 +434,7 @@ def test_correct_memory_tombstones_old_creates_replacement_and_audits(tmp_path):
     new_events = [event for event in store.audit_events(replacement.rid) if event["event_type"] != "memory_recalled"]
     assert [event["event_type"] for event in old_events] == [
         "memory_added",
-        "memory_tombstoned",
+        "memory_invalidated",
         "memory_corrected_from",
     ]
     assert old_events[-1]["metadata"]["replacement_rid"] == replacement.rid
@@ -419,11 +445,11 @@ def test_correct_memory_tombstones_old_creates_replacement_and_audits(tmp_path):
 def test_correct_memory_refuses_non_active_source(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     old = store.add_memory("Primary user prefers concise replies.", owner="primary")
-    store.tombstone(old.rid, reason="obsolete")
+    store.invalidate(old.rid, reason="obsolete")
 
     try:
         store.correct_memory(old.rid, "Primary user prefers concise replies with next steps.")
     except ValueError as exc:
         assert "active" in str(exc)
     else:  # pragma: no cover - documents expected failure path
-        raise AssertionError("correct_memory should reject tombstoned source memories")
+        raise AssertionError("correct_memory should reject invalidated source memories")

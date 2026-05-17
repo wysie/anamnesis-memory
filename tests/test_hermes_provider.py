@@ -6,7 +6,7 @@ from anamnesis import Anamnesis
 from anamnesis.hermes_provider import AnamnesisMemoryProvider
 
 
-def test_hermes_provider_recall_enforces_scope_and_tombstones(tmp_path, monkeypatch):
+def test_hermes_provider_recall_enforces_scope_and_invalidates(tmp_path, monkeypatch):
     db_path = tmp_path / "anamnesis.db"
     store = Anamnesis(db_path)
     visible = store.add_memory(
@@ -20,12 +20,12 @@ def test_hermes_provider_recall_enforces_scope_and_tombstones(tmp_path, monkeypa
         owner="other",
         platform_scope="cli",
     )
-    tombstoned = store.add_memory(
+    invalidated = store.add_memory(
         "Archived project code obsolete-raven.",
         owner="default",
         platform_scope="cli",
     )
-    store.tombstone(tombstoned.rid, reason="test")
+    store.invalidate(invalidated.rid, reason="test")
 
     monkeypatch.setenv("ANAMNESIS_DB_PATH", str(db_path))
     monkeypatch.setenv("ANAMNESIS_OWNER", "default")
@@ -586,6 +586,6 @@ def test_hermes_provider_correct_tool_replaces_memory(tmp_path, monkeypatch):
     )
 
     assert corrected["success"] is True
-    assert corrected["old"]["status"] == "tombstoned"
+    assert corrected["old"]["status"] == "invalidated"
     assert corrected["replacement"]["text"] == "Primary user prefers concise updates with next steps."
     assert corrected["replacement"]["metadata"]["corrects_rid"] == remembered["memory"]["rid"]

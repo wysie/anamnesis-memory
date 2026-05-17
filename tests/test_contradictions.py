@@ -43,7 +43,7 @@ def test_detect_contradictions_is_idempotent(tmp_path):
     assert len(store.contradictions(status="open")) == 1
 
 
-def test_resolve_contradiction_tombstones_loser(tmp_path):
+def test_resolve_contradiction_invalidates_loser(tmp_path):
     store = Anamnesis(tmp_path / "anamnesis.db")
     old = store.add_memory("User can share WhatsApp summaries.", owner="primary", domain="privacy", source="test")
     new = store.add_memory("User cannot share WhatsApp summaries.", owner="primary", domain="privacy", source="test")
@@ -53,5 +53,5 @@ def test_resolve_contradiction_tombstones_loser(tmp_path):
 
     assert resolved.status == "resolved"
     assert resolved.winner_rid == new.rid
-    assert store.get_memory(old.rid).status == "tombstoned"
+    assert store.get_memory(old.rid).status == "invalidated"
     assert store.get_memory(new.rid).status == "active"

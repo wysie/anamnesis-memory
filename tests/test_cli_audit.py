@@ -19,11 +19,11 @@ def test_cli_audit_shows_memory_events_and_correction_chain(tmp_path, capsys):
     assert main(["--db", str(db_path), "audit", old.rid, "--json"]) == 0
     old_payload = json.loads(capsys.readouterr().out)
     assert old_payload["rid"] == old.rid
-    assert old_payload["memory"]["status"] == "tombstoned"
+    assert old_payload["memory"]["status"] == "invalidated"
     assert old_payload["correction_chain"]["replacement_rid"] == replacement.rid
     assert [event["event_type"] for event in old_payload["events"]] == [
         "memory_added",
-        "memory_tombstoned",
+        "memory_invalidated",
         "memory_corrected_from",
     ]
 

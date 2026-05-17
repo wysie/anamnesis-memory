@@ -4,7 +4,7 @@ from anamnesis import Anamnesis
 from anamnesis.cli import main
 
 
-def test_cli_shadow_turn_reports_write_decision_and_recall_without_mutating(tmp_path, capsys):
+def test_cli_preview_turn_reports_write_decision_and_recall_without_mutating(tmp_path, capsys):
     db_path = tmp_path / "anamnesis.db"
     store = Anamnesis(db_path)
     stored = store.add_memory(
@@ -20,8 +20,8 @@ def test_cli_shadow_turn_reports_write_decision_and_recall_without_mutating(tmp_
             [
                 "--db",
                 str(db_path),
-                "shadow-turn",
-                "Primary user prefers Anamnesis shadow-mode logging.",
+                "preview-turn",
+                "Primary user prefers Anamnesis preview logging.",
                 "--owner",
                 "primary",
                 "--platform",
@@ -33,17 +33,17 @@ def test_cli_shadow_turn_reports_write_decision_and_recall_without_mutating(tmp_
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["mode"] == "shadow"
+    assert payload["mode"] == "preview"
     assert payload["would_write"]["action"] == "accept"
     assert payload["would_write"]["platform_scope"] == "all"
     assert payload["would_write"]["source_platform"] == "telegram"
     assert payload["would_inject"]["included"][0]["rid"] == stored.rid
-    with store._connect() as conn:  # noqa: SLF001 - assert shadow-mode has no side effects.
+    with store._connect() as conn:  # noqa: SLF001 - assert preview has no side effects.
         assert conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0] == 1
         assert conn.execute("SELECT COUNT(*) FROM memory_inbox").fetchone()[0] == 0
 
 
-def test_cli_shadow_turn_reports_rejected_low_value_fragment(tmp_path, capsys):
+def test_cli_preview_turn_reports_rejected_low_value_fragment(tmp_path, capsys):
     db_path = tmp_path / "anamnesis.db"
 
     assert (
@@ -51,7 +51,7 @@ def test_cli_shadow_turn_reports_rejected_low_value_fragment(tmp_path, capsys):
             [
                 "--db",
                 str(db_path),
-                "shadow-turn",
+                "preview-turn",
                 "Ok go ahead la",
                 "--owner",
                 "primary",

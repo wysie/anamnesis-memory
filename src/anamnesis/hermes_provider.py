@@ -310,7 +310,7 @@ class AnamnesisMemoryProvider(MemoryProvider):
                 rid = str(args.get("rid") or "").strip()
                 if not rid:
                     return tool_error("rid is required")
-                self._store.tombstone(rid, reason=str(args.get("reason") or ""))
+                self._store.invalidate(rid, reason=str(args.get("reason") or ""))
                 return json.dumps({"success": True, "rid": rid})
             if tool_name == "anamnesis_correct":
                 rid = str(args.get("rid") or "").strip()

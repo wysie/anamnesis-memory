@@ -154,7 +154,7 @@ function badge(text) {
 }
 
 function statusLabel(status) {
-  return ({ active: 'Active', shadowed: 'Superseded', tombstoned: 'Invalidated' })[status] || status;
+  return ({ active: 'Active', superseded: 'Superseded', invalidated: 'Invalidated' })[status] || status;
 }
 
 function scopeLabel(scope) {
@@ -255,7 +255,7 @@ function populateFixedSelect(select, values) {
 
 function populateShadowControls(facets) {
   const owners = mergeFacetRows(facets.memories.owners, facets.inbox.owners);
-  populateFixedSelect($('#shadowOwner'), owners.length ? owners.map((row) => ({ value: row.value, label: `${row.value} (${formatCount(row.count)})` })) : [{ value: 'primary', label: 'primary' }]);
+  populateFixedSelect($('#previewOwner'), owners.length ? owners.map((row) => ({ value: row.value, label: `${row.value} (${formatCount(row.count)})` })) : [{ value: 'primary', label: 'primary' }]);
 
   const knownPlatforms = [
     { value: 'whatsapp', label: 'WhatsApp' },
@@ -267,7 +267,7 @@ function populateShadowControls(facets) {
   const extraPlatforms = mergeFacetRows(facets.memories.platforms || [], facets.inbox.platforms || [])
     .filter((row) => !knownPlatforms.some((platform) => platform.value === row.value))
     .map((row) => ({ value: row.value, label: `${scopeLabel(row.value)} (${formatCount(row.count)})` }));
-  populateFixedSelect($('#shadowPlatform'), [...knownPlatforms, ...extraPlatforms]);
+  populateFixedSelect($('#previewPlatform'), [...knownPlatforms, ...extraPlatforms]);
 
   const knownTargets = [
     { value: 'memory', label: 'General memory' },
@@ -282,7 +282,7 @@ function populateShadowControls(facets) {
   const extraTargets = mergeFacetRows(facets.memories.domains || [], facets.inbox.domains || [])
     .filter((row) => row.value && !knownTargets.some((target) => target.value === row.value))
     .map((row) => ({ value: row.value, label: `${row.value} (${formatCount(row.count)})` }));
-  populateFixedSelect($('#shadowTarget'), [...knownTargets, ...extraTargets]);
+  populateFixedSelect($('#previewTarget'), [...knownTargets, ...extraTargets]);
 }
 
 async function loadFacets() {
@@ -301,8 +301,8 @@ async function loadOverview() {
   const payload = await getJson('/api/overview');
   $('#overviewMetrics').innerHTML = [
     ['Active', payload.counts.memories.active],
-    ['Superseded', payload.counts.memories.shadowed],
-    ['Invalidated', payload.counts.memories.tombstoned],
+    ['Superseded', payload.counts.memories.superseded],
+    ['Invalidated', payload.counts.memories.invalidated],
     ['Pending inbox', payload.counts.inbox.pending],
   ].map(([label, value]) => `<section class="metric"><span class="metric-value">${formatCount(value)}</span><span class="metric-label">${label}</span></section>`).join('');
   $('#recentMemories').innerHTML = payload.recent_memories.length ? payload.recent_memories.map(memoryCard).join('') : empty('No active memories yet.');
@@ -348,15 +348,15 @@ async function loadInbox() {
   setPager('inbox', payload);
 }
 
-async function runShadowCheck() {
-  const payload = await postJson('/api/shadow-memory-write', {
-    text: $('#shadowText').value,
-    owner: $('#shadowOwner').value || 'primary',
-    platform: $('#shadowPlatform').value || 'whatsapp',
-    target: $('#shadowTarget').value || 'memory',
+async function runPreviewCheck() {
+  const payload = await postJson('/api/preview-memory-write', {
+    text: $('#previewText').value,
+    owner: $('#previewOwner').value || 'primary',
+    platform: $('#previewPlatform').value || 'whatsapp',
+    target: $('#previewTarget').value || 'memory',
     origin: 'dashboard',
   });
-  $('#shadowResult').textContent = prettyJson(payload);
+  $('#previewResult').textContent = prettyJson(payload);
 }
 
 async function openAudit(rid = $('#auditRid').value) {
@@ -626,16 +626,16 @@ function renderMaintenanceResult(payload) {
   }
 
   lines.push(`Expired inbox items: ${formatCount(summary.expired_inbox || 0)}`);
-  lines.push(`Superseded duplicate memories: ${formatCount(summary.shadowed_duplicates || 0)}`);
+  lines.push(`Superseded duplicate memories: ${formatCount(summary.superseded_duplicates || 0)}`);
   lines.push('');
   const expired = payload.expired_inbox || [];
   lines.push(expired.length ? 'Expired inbox examples:' : 'Expired inbox examples: none');
   expired.slice(0, 10).forEach((item, idx) => lines.push(`${idx + 1}. ${memorySnippet(item.proposed_text)}`));
   lines.push('');
-  const superseded = payload.shadowed_duplicates || [];
+  const superseded = payload.superseded_duplicates || [];
   lines.push(superseded.length ? 'Superseded duplicate IDs:' : 'Superseded duplicate IDs: none');
   superseded.slice(0, 10).forEach((item, idx) => {
-    lines.push(`${idx + 1}. ${shortId(item.shadowed_rid)} superseded by ${shortId(item.canonical_rid)} (${Math.round(Number(item.overlap || 0) * 100)}%)`);
+    lines.push(`${idx + 1}. ${shortId(item.superseded_rid)} superseded by ${shortId(item.canonical_rid)} (${Math.round(Number(item.overlap || 0) * 100)}%)`);
   });
   if (superseded.length > 10) lines.push(`... plus ${formatCount(superseded.length - 10)} more`);
   return lines.join('\n');
@@ -794,10 +794,10 @@ function bindEvents() {
   $('#nextInboxButton')?.addEventListener('click', () => { state.inboxOffset += Number($('#inboxLimit').value || 50); loadInbox(); });
   $('#selectAllMemories')?.addEventListener('change', (event) => $$('[data-select-memory]').forEach((node) => { node.checked = event.target.checked; }));
   $('#selectAllInbox')?.addEventListener('change', (event) => $$('[data-select-inbox]').forEach((node) => { node.checked = event.target.checked; }));
-  $('#batchTombstoneMemoriesButton')?.addEventListener('click', () => batchMemories('tombstone'));
+  $('#batchInvalidateMemoriesButton')?.addEventListener('click', () => batchMemories('invalidate'));
   $('#batchAcceptInboxButton')?.addEventListener('click', () => batchInbox('accept'));
   $('#batchRejectInboxButton')?.addEventListener('click', () => batchInbox('reject'));
-  $('#runShadowButton')?.addEventListener('click', runShadowCheck);
+  $('#runPreviewButton')?.addEventListener('click', runPreviewCheck);
   $('#openAuditButton')?.addEventListener('click', () => openAudit());
   $('#prepareCorrectionButton')?.addEventListener('click', () => $('#correctText').focus());
   $('#correctMemoryButton')?.addEventListener('click', correctMemory);

@@ -34,7 +34,7 @@ def test_classify_intake_rejects_low_value_chat_fragments():
         "Carry on leh why u stop working",
         "Go",
         "Ok do it la.",
-        "What is. Batch shadow mode for",
+        "What is. Batch preview mode for",
         "Is WhatsApp Primary user and telegram Primary user considered same user or no.",
         "3. And how would someone set platform scope all lol",
         "U didn't really answer the platform scope question. If you save smth now does it default to current or all or whatever",

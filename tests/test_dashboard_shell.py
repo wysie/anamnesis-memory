@@ -16,7 +16,7 @@ def test_dashboard_serves_static_shell_and_assets(tmp_path):
     assert "data-view=\"overview\"" in html
     assert "data-view=\"memories\"" in html
     assert "data-view=\"inbox\"" in html
-    assert "data-view=\"shadow\"" in html
+    assert "data-view=\"preview\"" in html
     assert "data-view=\"simulator\"" in html
     assert "data-view=\"maintenance\"" in html
     assert "data-view=\"runtime\"" in html
@@ -57,7 +57,7 @@ def test_dashboard_serves_static_shell_and_assets(tmp_path):
     assert status == 200
     assert headers["content-type"] == "application/javascript; charset=utf-8"
     assert "'/api/overview'" in js_text
-    assert "'/api/shadow-memory-write'" in js_text
+    assert "'/api/preview-memory-write'" in js_text
     assert "'/api/auth/status'" in js_text
     assert "'/api/auth/login'" in js_text
     assert "showModal" in js_text
@@ -76,7 +76,7 @@ def test_dashboard_shell_uses_semantic_action_labels(tmp_path):
 
     assert "Preview Tools" in html
     assert "Run preview" in html
-    assert "Run shadow check" not in html
+    assert "Run legacy preview check" not in html
     assert "General memory" in html
     assert "Infrastructure" in html
     assert "Open memory" in js_text
